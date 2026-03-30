@@ -1,0 +1,13 @@
+node_modules
+.DS_Store
+.pnpm-debug.log*
+coverage
+dist
+build
+.env*
+!.env.example
+!apps/web/.env.example
+apps/*/.next
+apps/*/out
+apps/*/build
+*.tsbuildinfo

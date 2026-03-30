@@ -1,0 +1,41 @@
+{
+  "name": "turnkey-wagmi-connector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@turnkey/core": "1.14.0",
+    "@turnkey/eip-1193-provider": "3.4.27",
+    "@turnkey/sdk-types": "0.13.0",
+    "@turnkey/viem": "0.14.27",
+    "@wagmi/core": "2.22.1",
+    "react": "19.2.4"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.95.2",
+    "@turnkey/react-wallet-kit": "^1.11.0",
+    "react": "^19.2.4",
+    "viem": "^2.47.6",
+    "wagmi": "^2.19.5"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "5.95.2",
+    "@types/react": "^19.2.14",
+    "@turnkey/react-wallet-kit": "1.11.0",
+    "viem": "2.47.6",
+    "vitest": "^4.1.2",
+    "wagmi": "2.19.5"
+  }
+}
