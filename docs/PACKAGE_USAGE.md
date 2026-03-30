@@ -1,0 +1,285 @@
+# Package Usage
+
+This document explains how to use `turnkey-wagmi-connector` in your own app.
+
+## What The Package Does
+
+The package provides a Turnkey-backed Wagmi connector and a session bridge.
+
+The intended model is:
+
+1. Turnkey Embedded Wallet Kit owns authentication and session state.
+2. The package exposes a Wagmi connector that makes the embedded Turnkey EVM wallet look like a normal Wagmi wallet.
+3. The bridge auto-connects the Turnkey wallet after auth.
+4. The bridge proactively calls `refreshSession()` before expiry.
+5. If Turnkey auth disappears, all active Wagmi connectors are disconnected.
+
+This lets you:
+
+- expose the embedded Turnkey wallet inside a normal Wagmi app
+- reuse that connection in LI.FI or other Wagmi-aware tools
+- allow the user to switch to external wallets without dropping the Turnkey session authority
+
+## Exports
+
+Current public exports:
+
+- `createTurnkeyConnector`
+- `TurnkeySessionProvider`
+- `TurnkeyWagmiBridge`
+- `useTurnkeySessionGate`
+- `useTurnkeyWalletActions`
+
+## Install
+
+The package currently expects these peers in the consuming app:
+
+```bash
+pnpm add wagmi viem react @tanstack/react-query @turnkey/react-wallet-kit
+```
+
+The reusable package itself depends on:
+
+- `@turnkey/core`
+- `@turnkey/eip-1193-provider`
+- `@turnkey/sdk-types`
+- `@turnkey/viem`
+- `@wagmi/core`
+
+## Typical Integration Shape
+
+You usually want:
+
+1. a Turnkey provider config
+2. a custom Turnkey connector from `createTurnkeyConnector`
+3. a normal Wagmi config that includes that connector
+4. `TurnkeySessionProvider` wrapped around your app
+5. `TurnkeyWagmiBridge` inside the provider tree
+
+## Example
+
+```tsx
+"use client";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { WagmiProvider, createConfig, http } from "wagmi";
+import { base, mainnet } from "viem/chains";
+import {
+  TurnkeySessionProvider,
+  TurnkeyWagmiBridge,
+  createTurnkeyConnector,
+} from "turnkey-wagmi-connector";
+
+const chains = [mainnet, base] as const;
+
+const turnkeyConnector = createTurnkeyConnector({
+  chains,
+  walletLabel: "Turnkey Session",
+});
+
+const wagmiConfig = createConfig({
+  chains,
+  connectors: [turnkeyConnector],
+  transports: {
+    [mainnet.id]: http(),
+    [base.id]: http(),
+  },
+});
+
+const queryClient = new QueryClient();
+
+const turnkeyConfig = {
+  apiBaseUrl: "https://api.turnkey.com",
+  organizationId: process.env.NEXT_PUBLIC_TURNKEY_ORGANIZATION_ID!,
+  authProxyConfigId: process.env.NEXT_PUBLIC_TURNKEY_AUTH_PROXY_CONFIG_ID!,
+  auth: {
+    autoRefreshSession: false,
+    methods: {
+      emailOtpAuthEnabled: true,
+      smsOtpAuthEnabled: false,
+      passkeyAuthEnabled: false,
+      walletAuthEnabled: false,
+      googleOauthEnabled: false,
+      appleOauthEnabled: false,
+      xOauthEnabled: false,
+      discordOauthEnabled: false,
+      facebookOauthEnabled: false,
+    },
+    methodOrder: ["email"],
+  },
+} as const;
+
+export function AppProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TurnkeySessionProvider turnkeyConfig={turnkeyConfig}>
+        <WagmiProvider config={wagmiConfig}>
+          <TurnkeyWagmiBridge wagmiConfig={wagmiConfig} />
+          {children}
+        </WagmiProvider>
+      </TurnkeySessionProvider>
+    </QueryClientProvider>
+  );
+}
+```
+
+## `createTurnkeyConnector`
+
+Use this when you want the embedded Turnkey wallet to behave like a normal Wagmi connector.
+
+Input:
+
+```ts
+type CreateTurnkeyConnectorOptions = {
+  chains: readonly [Chain, ...Chain[]];
+  walletLabel?: string;
+  icon?: string;
+};
+```
+
+Behavior:
+
+- resolves the first embedded EVM account from Turnkey wallets
+- creates a Turnkey EIP-1193 provider lazily
+- supports connect, disconnect, account lookup, auth checks, and chain switching
+- returns unauthorized unless Turnkey auth and an embedded EVM account both exist
+
+## `TurnkeySessionProvider`
+
+Wraps `@turnkey/react-wallet-kit` and syncs Turnkey state into the package runtime.
+
+Props:
+
+```ts
+type TurnkeySessionProviderProps = {
+  children: React.ReactNode;
+  turnkeyConfig: TurnkeyProviderConfig;
+  callbacks?: TurnkeyCallbacks;
+};
+```
+
+Important behavior:
+
+- mirrors Turnkey auth/session/wallet data into a runtime store
+- resolves the embedded EVM account
+- records `beforeSessionExpiry`, `onSessionExpired`, and `onAuthenticationSuccess`
+
+## `TurnkeyWagmiBridge`
+
+Use this once per Wagmi config.
+
+Props:
+
+```ts
+type TurnkeyWagmiBridgeProps = {
+  wagmiConfig: Config;
+  turnkeyConnectorId?: string;
+  refreshLeadTimeMs?: number;
+  autoConnectTurnkey?: boolean;
+};
+```
+
+Current behavior:
+
+- auto-connects the Turnkey connector after successful auth if no other connector is active
+- calls `refreshSession()` when Turnkey reports `beforeSessionExpiry`
+- disconnects all active Wagmi connectors if refresh fails
+- disconnects all active connectors again when the Turnkey session actually expires
+- disconnects all connectors when Turnkey auth becomes unauthenticated
+
+## `useTurnkeySessionGate`
+
+Useful if you want session-aware UI controls.
+
+Returns:
+
+- `authState`
+- `reconnectRequired`
+- `activeConnectorId`
+- `isSessionValid`
+- `connectTurnkey()`
+- `refreshSession()`
+- `disconnectAll()`
+- `lastEvent`
+- `lastEventAt`
+- `embeddedAccount`
+
+Typical uses:
+
+- connect/reconnect button
+- session-expired banner
+- embedded-account display
+- debug panels
+
+## `useTurnkeyWalletActions`
+
+This exposes direct Turnkey-backed wallet actions using `@turnkey/viem`.
+
+Returns:
+
+- `address`
+- `chainId`
+- `signMessage()`
+- `signTypedData()`
+- `sendTransaction()`
+
+Use this when you want to bypass generic provider semantics and sign/send directly through Turnkey.
+
+## Recommended App Configuration
+
+For the auth config:
+
+- set `autoRefreshSession: false`
+- let the bridge call `refreshSession()` explicitly
+- enable only the auth methods you actually want
+
+For first implementation:
+
+- keep the package EVM-only
+- use one embedded EVM account
+- resolve the first embedded EVM account as the active signer
+
+## Common Pitfalls
+
+### 1. Duplicate provider packages
+
+Your app and the package must share the same React provider instances.
+
+If you see errors like:
+
+- `useConfig must be used within WagmiProvider`
+- `useTurnkey must be used within TurnkeyProvider`
+
+you likely have duplicate runtime copies of:
+
+- `wagmi`
+- `@turnkey/react-wallet-kit`
+
+### 2. Turnkey auth is the source of truth
+
+Do not treat Wagmi persistence alone as the source of connection state.
+
+The bridge is designed so that:
+
+- valid Turnkey session => Wagmi connectors may stay connected
+- invalid Turnkey session => active Wagmi connectors are disconnected
+
+### 3. External wallet switching does not replace Turnkey session authority
+
+An external wallet can become the active Wagmi connector, but Turnkey still governs whether the session is valid.
+
+### 4. SSR and monorepos
+
+If you use the package inside a Next monorepo workspace, pay attention to:
+
+- shared peer dependencies
+- dynamic routes where client-only wallet providers are required
+- `transpilePackages` if you consume the workspace package source directly
+
+## Current Limitations
+
+- first embedded EVM account only
+- no account selector
+- no Solana support
+- no publish-ready dist output yet
+- the demo uses an app-local direct-action hook for `/sandbox` because of a workspace SSR edge case

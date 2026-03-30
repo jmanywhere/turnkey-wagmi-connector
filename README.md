@@ -81,6 +81,12 @@ pnpm typecheck
 pnpm build
 ```
 
+## Documentation
+
+- [Testing the demo](./docs/TESTING_DEMO.md)
+- [Package usage](./docs/PACKAGE_USAGE.md)
+- [Publishing to npm](./docs/NPM_PUBLISHING.md)
+
 ## Notes
 
 - `/widget` and `/sandbox` are dynamic routes because they depend on client-side wallet providers.
