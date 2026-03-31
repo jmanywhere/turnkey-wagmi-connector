@@ -90,7 +90,6 @@ pnpm build
 ## Notes
 
 - `/widget` and `/sandbox` are dynamic routes because they depend on client-side wallet providers.
-- The package exposes direct Turnkey helpers, but the sandbox route currently uses an app-local direct-action hook to avoid a Next workspace provider-identity issue during SSR.
 - LI.FI currently pulls multichain wallet dependencies, including Sui packages, so the app pins `@mysten/sui@2.8.0` to keep the widget build stable.
 
 ## License

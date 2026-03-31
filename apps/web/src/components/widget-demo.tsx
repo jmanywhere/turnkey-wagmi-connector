@@ -5,7 +5,6 @@ import Link from "next/link";
 import { AppKitAccountButton, AppKitConnectButton, AppKitNetworkButton } from "@reown/appkit/react";
 import { LiFiWidget } from "@lifi/widget";
 import { useSyncWagmiConfig } from "@lifi/wallet-management";
-import { AuthState, useTurnkey } from "@turnkey/react-wallet-kit";
 import {
   useAccount,
   useBalance,
@@ -14,15 +13,15 @@ import {
   useConnections,
   useSignMessage,
 } from "wagmi";
+import { useTurnkeySessionGate } from "turnkey-wagmi-connector";
 import {
   isReownConfigured,
   isTurnkeyConfigured,
 } from "@/lib/env";
 import { lifiChains, turnkeyConnector } from "@/lib/app-config";
-import { resolveEmbeddedAccount } from "@/lib/resolve-embedded-account";
 
 export function WidgetDemo() {
-  const turnkey = useTurnkey();
+  const sessionGate = useTurnkeySessionGate();
   const wagmiConfig = useConfig();
   const connections = useConnections();
   const account = useAccount();
@@ -37,10 +36,6 @@ export function WidgetDemo() {
   const { signMessageAsync } = useSignMessage();
   const [signature, setSignature] = useState<string>("");
   const [error, setError] = useState<string>("");
-  const embeddedAccount = useMemo(
-    () => resolveEmbeddedAccount(turnkey.wallets),
-    [turnkey.wallets],
-  );
 
   useSyncWagmiConfig(wagmiConfig, [turnkeyConnector], [...lifiChains]);
 
@@ -85,7 +80,7 @@ export function WidgetDemo() {
         </div>
       ))}
 
-      {turnkey.authState === AuthState.Unauthenticated && account.isConnected ? (
+      {sessionGate.authState === "unauthenticated" && account.isConnected ? (
         <div className="session-banner">
           Turnkey is unauthenticated. If the session bridge is working, all
           active Wagmi connectors should be forced to disconnect.
@@ -97,21 +92,21 @@ export function WidgetDemo() {
           <div className="button-row">
             <button
               className="action-button primary"
-              onClick={() => void turnkey.handleLogin()}
+              onClick={() => void sessionGate.connectTurnkey()}
               type="button"
             >
               Connect Turnkey session
             </button>
             <button
               className="action-button secondary"
-              onClick={() => void turnkey.refreshSession()}
+              onClick={() => void sessionGate.refreshSession()}
               type="button"
             >
               Refresh session
             </button>
             <button
               className="action-button secondary"
-              onClick={() => void turnkey.logout()}
+              onClick={() => void sessionGate.disconnectAll()}
               type="button"
             >
               Disconnect all
@@ -133,7 +128,7 @@ export function WidgetDemo() {
             </div>
             <div className="status-card">
               <span className="status-label">Auth state</span>
-              <div className="status-value">{turnkey.authState}</div>
+              <div className="status-value">{sessionGate.authState}</div>
             </div>
             <div className="status-card">
               <span className="status-label">Active connector</span>
@@ -144,7 +139,7 @@ export function WidgetDemo() {
             <div className="status-card">
               <span className="status-label">Embedded address</span>
               <div className="status-value">
-                {embeddedAccount?.address ?? "not resolved"}
+                {sessionGate.embeddedAccount?.address ?? "not resolved"}
               </div>
             </div>
             <div className="status-card">

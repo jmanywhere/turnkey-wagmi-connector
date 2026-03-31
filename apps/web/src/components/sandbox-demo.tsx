@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { parseEther } from "viem";
+import { useTurnkeyWalletActions } from "turnkey-wagmi-connector";
 import { isTurnkeyConfigured } from "@/lib/env";
-import { useDirectTurnkeyActions } from "@/lib/use-direct-turnkey-actions";
 
 const typedDataPayload = {
   domain: {
@@ -26,7 +26,7 @@ const typedDataPayload = {
 };
 
 export function SandboxDemo() {
-  const turnkeyActions = useDirectTurnkeyActions();
+  const turnkeyActions = useTurnkeyWalletActions();
   const [messageSignature, setMessageSignature] = useState("");
   const [typedSignature, setTypedSignature] = useState("");
   const [transactionHash, setTransactionHash] = useState("");

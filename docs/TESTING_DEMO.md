@@ -174,5 +174,4 @@ Expected result:
 ## Current Caveats
 
 - `/widget` and `/sandbox` are marked dynamic because they depend on client-side wallet providers.
-- The package exports `useTurnkeyWalletActions`, but the demo sandbox currently uses an app-local direct-action hook to avoid a Next workspace SSR/provider-identity issue.
 - LI.FI currently pulls multichain dependencies, so the app pins `@mysten/sui@2.8.0` to keep the widget build stable.

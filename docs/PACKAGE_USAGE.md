@@ -282,4 +282,3 @@ If you use the package inside a Next monorepo workspace, pay attention to:
 - no account selector
 - no Solana support
 - no publish-ready dist output yet
-- the demo uses an app-local direct-action hook for `/sandbox` because of a workspace SSR edge case
