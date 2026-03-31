@@ -49,6 +49,8 @@ export function TurnkeyWagmiBridge({
   useEffect(() => {
     if (!autoConnectTurnkey) return;
     if (turnkey.authState !== AuthState.Authenticated) return;
+    if (!turnkey.session) return;
+    if (!sessionGate.isSessionValid) return;
     if (!sessionGate.embeddedAccount) return;
     if (getConnections(wagmiConfig).length > 0) return;
 
@@ -111,13 +113,14 @@ export function TurnkeyWagmiBridge({
 
   useEffect(() => {
     if (turnkey.authState !== AuthState.Authenticated) return;
+    if (!turnkey.session) return;
     if (sessionGate.isSessionValid) return;
 
     setReconnectRequired(true, "Turnkey session expired");
     startTransition(() => {
       void disconnectForExpiredSession(wagmiConfig, turnkey.logout);
     });
-  }, [sessionGate.isSessionValid, turnkey.authState, turnkey.logout, wagmiConfig]);
+  }, [sessionGate.isSessionValid, turnkey.authState, turnkey.logout, turnkey.session, wagmiConfig]);
 
   return null;
 }

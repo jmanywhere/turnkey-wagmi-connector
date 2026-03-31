@@ -32,24 +32,26 @@ export function useTurnkeySessionGate(): TurnkeySessionGate {
     getTurnkeyRuntimeState,
   );
   const [now, setNow] = useState(() => Date.now());
+  const sessionExpiresAt = turnkey.session?.expiry
+    ? Number(turnkey.session.expiry) * 1000
+    : undefined;
 
   useEffect(() => {
-    if (!runtime.sessionExpiresAt) return;
+    if (!sessionExpiresAt) return;
 
     const intervalId = window.setInterval(() => {
       setNow(Date.now());
     }, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [runtime.sessionExpiresAt]);
+  }, [sessionExpiresAt]);
 
-  const sessionExpiresAt = runtime.sessionExpiresAt;
   const sessionSecondsRemaining = sessionExpiresAt
     ? Math.max(0, Math.ceil((sessionExpiresAt - now) / 1000))
     : undefined;
   const isSessionValid = Boolean(
-    runtime.authState === "authenticated" &&
-      runtime.session &&
+    turnkey.authState === "authenticated" &&
+      turnkey.session &&
       sessionExpiresAt &&
       sessionExpiresAt > now,
   );
