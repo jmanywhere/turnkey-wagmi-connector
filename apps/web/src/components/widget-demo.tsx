@@ -4,12 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AppKitAccountButton, AppKitConnectButton, AppKitNetworkButton } from "@reown/appkit/react";
 import { LiFiWidget } from "@lifi/widget";
-import { useSyncWagmiConfig } from "@lifi/wallet-management";
 import {
   useAccount,
   useBalance,
   useChainId,
-  useConfig,
   useConnections,
   useSignMessage,
 } from "wagmi";
@@ -18,26 +16,22 @@ import {
   isReownConfigured,
   isTurnkeyConfigured,
 } from "@/lib/env";
-import { lifiChains, turnkeyConnector } from "@/lib/app-config";
 
 export function WidgetDemo() {
   const sessionGate = useTurnkeySessionGate();
-  const wagmiConfig = useConfig();
   const connections = useConnections();
   const account = useAccount();
   const chainId = useChainId();
-  const { data: balance } = useBalance({
+  const { data: balance, error: balanceError } = useBalance({
     address: account.address,
-    chainId,
+    chainId: account.chainId ?? chainId,
     query: {
-      enabled: Boolean(account.address),
+      enabled: account.isConnected && Boolean(account.address),
     },
   });
   const { signMessageAsync } = useSignMessage();
   const [signature, setSignature] = useState<string>("");
   const [error, setError] = useState<string>("");
-
-  useSyncWagmiConfig(wagmiConfig, [turnkeyConnector], [...lifiChains]);
 
   const activeConnector = connections[0]?.connector;
   const issues = useMemo(() => {
@@ -155,6 +149,12 @@ export function WidgetDemo() {
               </div>
             </div>
           </div>
+
+          {balanceError ? (
+            <div className="session-banner">
+              Native balance fetch failed: {balanceError.message}
+            </div>
+          ) : null}
 
           <div className="stack">
             <h2>Wagmi signer smoke test</h2>

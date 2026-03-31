@@ -1,11 +1,20 @@
 import { createEIP1193Provider, type TurnkeyEIP1193Provider } from "@turnkey/eip-1193-provider";
+import { createAccountWithAddress } from "@turnkey/viem";
 import {
   ProviderNotFoundError,
   SwitchChainNotSupportedError,
   createConnector,
   type CreateConnectorFn,
 } from "wagmi";
-import type { AddEthereumChainParameter, Address, Chain, EIP1193Provider, Hex } from "viem";
+import {
+  getAddress,
+  hexToBytes,
+  type AddEthereumChainParameter,
+  type Address,
+  type Chain,
+  type EIP1193Provider,
+  type Hex,
+} from "viem";
 import { getTurnkeyRuntimeState } from "../provider/runtime-store";
 
 export type CreateTurnkeyConnectorOptions = {
@@ -35,6 +44,7 @@ function toProviderChain(chain: Chain): AddEthereumChainParameter {
 }
 
 async function getOrCreateProvider(
+  configuredChains: readonly Chain[],
   chain: Chain,
   cache: ProviderCache,
 ): Promise<TurnkeyConnectorProvider> {
@@ -43,18 +53,64 @@ async function getOrCreateProvider(
     throw new ProviderNotFoundError();
   }
 
-  if (cache.provider && cache.chainId === chain.id) return cache.provider;
+  if (!cache.provider) {
+    const provider = await createEIP1193Provider({
+      walletId: runtime.embeddedAccount.walletId as never,
+      organizationId: runtime.session.organizationId as never,
+      turnkeyClient: runtime.httpClient as never,
+      chains: configuredChains.map(toProviderChain),
+    });
 
-  const provider = await createEIP1193Provider({
-    walletId: runtime.embeddedAccount.walletId as never,
-    organizationId: runtime.session.organizationId as never,
-    turnkeyClient: runtime.httpClient as never,
-    chains: [toProviderChain(chain)],
-  });
+    cache.provider = wrapProvider(provider);
+  }
 
-  cache.provider = provider;
+  if (cache.chainId !== chain.id) {
+    await cache.provider.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: `0x${chain.id.toString(16)}` }],
+    } as {
+      method: "wallet_switchEthereumChain";
+      params: [{ chainId: Hex }];
+    });
+  }
+
   cache.chainId = chain.id;
-  return provider;
+  return cache.provider;
+}
+
+function normalizeSignMessageInput(message: string) {
+  return message.startsWith("0x")
+    ? { raw: hexToBytes(message as Hex) }
+    : message;
+}
+
+function wrapProvider(provider: TurnkeyConnectorProvider): TurnkeyConnectorProvider {
+  return {
+    on: provider.on.bind(provider),
+    removeListener: provider.removeListener.bind(provider),
+    async request(args) {
+      if (args.method === "personal_sign") {
+        const runtime = getTurnkeyRuntimeState();
+        if (!runtime.httpClient || !runtime.session?.organizationId) {
+          throw new ProviderNotFoundError();
+        }
+
+        const [message, signWith] = args.params as [string, Address];
+        const account = createAccountWithAddress({
+          client: runtime.httpClient as never,
+          organizationId: runtime.session.organizationId,
+          signWith: getAddress(signWith),
+          ethereumAddress: getAddress(signWith),
+        });
+
+        return account.signMessage({
+          message: normalizeSignMessageInput(message),
+        });
+      }
+
+      return provider.request(args as never);
+    },
+  } as TurnkeyConnectorProvider;
 }
 
 export function createTurnkeyConnector({
@@ -80,7 +136,7 @@ export function createTurnkeyConnector({
         configuredChains.find((chain) => chain.id === (chainId ?? currentChainId)) ??
         configuredChains[0];
 
-      const provider = await getOrCreateProvider(nextChain, providerCache);
+      const provider = await getOrCreateProvider(configuredChains, nextChain, providerCache);
       await provider.request({ method: "eth_requestAccounts" });
 
       currentChainId = nextChain.id;
@@ -112,7 +168,7 @@ export function createTurnkeyConnector({
         configuredChains.find((item) => item.id === (chainId ?? currentChainId)) ??
         configuredChains[0];
       currentChainId = chain.id;
-      return getOrCreateProvider(chain, providerCache);
+      return getOrCreateProvider(configuredChains, chain, providerCache);
     },
     async isAuthorized() {
       const runtime = getTurnkeyRuntimeState();
@@ -135,19 +191,9 @@ export function createTurnkeyConnector({
         });
       }
 
+      await getOrCreateProvider(configuredChains, chain, providerCache);
       currentChainId = chain.id;
       emitter.emit("change", { chainId: chain.id });
-
-      const provider = providerCache.provider;
-      if (provider) {
-        await provider.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: `0x${chain.id.toString(16)}` }],
-        } as {
-          method: "wallet_switchEthereumChain";
-          params: [{ chainId: Hex }];
-        });
-      }
 
       return chain;
     },
@@ -156,8 +202,10 @@ export function createTurnkeyConnector({
         accounts: accounts as Address[],
       });
     },
-    onChainChanged(chainId: string) {
-      const normalized = Number.parseInt(chainId, 16);
+    onChainChanged(chainId: string | { chainId: string }) {
+      const nextChainId = typeof chainId === "string" ? chainId : chainId.chainId;
+      const normalized = Number.parseInt(nextChainId, 16);
+      if (Number.isNaN(normalized)) return;
       currentChainId = normalized;
       emitter.emit("change", { chainId: normalized });
     },

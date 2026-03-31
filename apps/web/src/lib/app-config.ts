@@ -25,8 +25,6 @@ export const appChains = [
   baseSepolia,
 ] as const;
 
-export const lifiChains = [mainnet, base, arbitrum, optimism, polygon] as const;
-
 const rpcOverrides = {
   [mainnet.id]: publicEnv.mainnetRpcUrl,
   [base.id]: publicEnv.baseRpcUrl,
