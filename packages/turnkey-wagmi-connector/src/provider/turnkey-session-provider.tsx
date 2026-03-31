@@ -3,7 +3,6 @@
 import type { PropsWithChildren } from "react";
 import { useEffect } from "react";
 import {
-  AuthState,
   TurnkeyProvider,
   type TurnkeyCallbacks,
   type TurnkeyProviderConfig,
@@ -30,6 +29,9 @@ function TurnkeyRuntimeSync() {
     setTurnkeyRuntimeState({
       authState: turnkey.authState,
       session: turnkey.session,
+      sessionExpiresAt: turnkey.session?.expiry
+        ? Number(turnkey.session.expiry) * 1000
+        : undefined,
       httpClient: turnkey.httpClient,
       wallets: turnkey.wallets,
     });
@@ -37,15 +39,10 @@ function TurnkeyRuntimeSync() {
   }, [
     turnkey.authState,
     turnkey.httpClient,
+    turnkey.session?.expiry,
     turnkey.session,
     turnkey.wallets,
   ]);
-
-  useEffect(() => {
-    if (turnkey.authState === AuthState.Unauthenticated) {
-      setReconnectRequired(false);
-    }
-  }, [turnkey.authState]);
 
   useEffect(() => resetTurnkeyRuntimeState, []);
 

@@ -24,6 +24,7 @@ export type TurnkeyEmbeddedEvmAccount = {
 export type TurnkeyRuntimeState = {
   authState: AuthState;
   session?: Session;
+  sessionExpiresAt?: number;
   httpClient?: unknown;
   wallets: Wallet[];
   embeddedAccount?: TurnkeyEmbeddedEvmAccount;

@@ -32,6 +32,15 @@ export function WidgetDemo() {
   const { signMessageAsync } = useSignMessage();
   const [signature, setSignature] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const connectedAddress = sessionGate.isSessionValid && account.isConnected
+    ? account.address
+    : undefined;
+  const lifiWidgetKey = `${connectedAddress ?? "disconnected"}:${String(
+    sessionGate.isSessionValid,
+  )}`;
+  const sessionExpiryLabel = sessionGate.sessionExpiresAt
+    ? new Date(sessionGate.sessionExpiresAt).toLocaleString()
+    : "n/a";
 
   const activeConnector = connections[0]?.connector;
   const issues = useMemo(() => {
@@ -78,6 +87,14 @@ export function WidgetDemo() {
         <div className="session-banner">
           Turnkey is unauthenticated. If the session bridge is working, all
           active Wagmi connectors should be forced to disconnect.
+        </div>
+      ) : null}
+
+      {sessionGate.reconnectRequired ? (
+        <div className="session-banner">
+          Turnkey session is no longer valid. Wagmi and LI.FI should auto-disconnect
+          until you reconnect.
+          {sessionGate.lastError ? ` Reason: ${sessionGate.lastError}` : ""}
         </div>
       ) : null}
 
@@ -143,6 +160,24 @@ export function WidgetDemo() {
               </div>
             </div>
             <div className="status-card">
+              <span className="status-label">Session valid</span>
+              <div className="status-value">
+                {sessionGate.isSessionValid ? "yes" : "no"}
+              </div>
+            </div>
+            <div className="status-card">
+              <span className="status-label">Expires at</span>
+              <div className="status-value">{sessionExpiryLabel}</div>
+            </div>
+            <div className="status-card">
+              <span className="status-label">Expires in</span>
+              <div className="status-value">
+                {sessionGate.sessionSecondsRemaining !== undefined
+                  ? `${sessionGate.sessionSecondsRemaining}s`
+                  : "n/a"}
+              </div>
+            </div>
+            <div className="status-card">
               <span className="status-label">Balance</span>
               <div className="status-value">
                 {balance ? `${balance.formatted} ${balance.symbol}` : "n/a"}
@@ -200,31 +235,38 @@ export function WidgetDemo() {
             working correctly, LI.FI should treat the selected Wagmi wallet as
             already connected.
           </p>
-          <LiFiWidget
-            integrator="turnkey-wagmi-connector-demo"
-            config={{
-              appearance: "light",
-              variant: "wide",
-              subvariant: "split",
-              fromChain: 8453,
-              toChain: 10,
-              theme: {
-                palette: {
-                  primary: { main: "#19140f" },
-                  secondary: { main: "#c25a2d" },
-                  background: { default: "#fff7ee", paper: "#fffdf9" },
-                  text: {
-                    primary: "#19140f",
-                    secondary: "#6a5d4d",
+          {connectedAddress ? (
+            <LiFiWidget
+              key={lifiWidgetKey}
+              integrator="turnkey-wagmi-connector-demo"
+              config={{
+                appearance: "light",
+                variant: "wide",
+                subvariant: "split",
+                fromChain: 8453,
+                toChain: 10,
+                theme: {
+                  palette: {
+                    primary: { main: "#19140f" },
+                    secondary: { main: "#c25a2d" },
+                    background: { default: "#fff7ee", paper: "#fffdf9" },
+                    text: {
+                      primary: "#19140f",
+                      secondary: "#6a5d4d",
+                    },
+                  },
+                  shape: {
+                    borderRadius: 18,
+                    borderRadiusSecondary: 18,
                   },
                 },
-                shape: {
-                  borderRadius: 18,
-                  borderRadiusSecondary: 18,
-                },
-              },
-            }}
-          />
+              }}
+            />
+          ) : (
+            <div className="session-banner">
+              Connect a valid wallet session to enable LI.FI route fetching.
+            </div>
+          )}
         </article>
       </section>
     </div>

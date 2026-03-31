@@ -23,6 +23,14 @@ async function disconnectAllConnections(config: Config) {
   }
 }
 
+async function disconnectForExpiredSession(
+  wagmiConfig: Config,
+  logout: () => Promise<void>,
+) {
+  await disconnectAllConnections(wagmiConfig);
+  await logout().catch(() => undefined);
+}
+
 export function TurnkeyWagmiBridge({
   wagmiConfig,
   turnkeyConnectorId = "turnkey",
@@ -88,7 +96,7 @@ export function TurnkeyWagmiBridge({
 
     if (event.type === "expired") {
       startTransition(() => {
-        void disconnectAllConnections(wagmiConfig);
+        void disconnectForExpiredSession(wagmiConfig, turnkey.logout);
       });
     }
   }, [sessionGate.lastEvent, turnkey, wagmiConfig]);
@@ -100,6 +108,16 @@ export function TurnkeyWagmiBridge({
       });
     }
   }, [turnkey.authState, wagmiConfig]);
+
+  useEffect(() => {
+    if (turnkey.authState !== AuthState.Authenticated) return;
+    if (sessionGate.isSessionValid) return;
+
+    setReconnectRequired(true, "Turnkey session expired");
+    startTransition(() => {
+      void disconnectForExpiredSession(wagmiConfig, turnkey.logout);
+    });
+  }, [sessionGate.isSessionValid, turnkey.authState, turnkey.logout, wagmiConfig]);
 
   return null;
 }
