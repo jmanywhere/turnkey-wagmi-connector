@@ -245,6 +245,158 @@ const wagmiConfig = wagmiAdapter.wagmiConfig;
 
 If AppKit is allowed to connect external wallets, that does not replace Turnkey as the session authority. `TurnkeyWagmiBridge` will still disconnect every active Wagmi connector if the Turnkey session is lost.
 
+## How Wagmi Hooks Work With Turnkey
+
+The package does not monkey-patch Wagmi hooks.
+
+Instead, it changes two things:
+
+1. it registers a normal Wagmi connector whose provider is backed by Turnkey
+2. it adds a bridge that decides when Wagmi connections are allowed to stay alive
+
+That means standard Wagmi hooks still behave like standard Wagmi hooks:
+
+- read hooks like `useAccount`, `useBalance`, and `useChainId` read the current Wagmi state
+- write hooks like `useWriteContract`, `useSendTransaction`, and `useSignMessage` use the active Wagmi connector
+- disconnect hooks like `useDisconnect` disconnect the active Wagmi connector through Wagmi
+
+What changes is the active connector and its lifecycle:
+
+- if the active connector is the Turnkey connector, Wagmi writes and signatures go through the Turnkey-backed provider
+- if the active connector is an external wallet, Wagmi writes and signatures go through that wallet instead
+- if the Turnkey session expires or becomes unauthenticated, `TurnkeyWagmiBridge` disconnects all active Wagmi connectors, so normal Wagmi hooks immediately reflect a disconnected state
+
+In other words:
+
+- Wagmi hooks still read and write through Wagmi
+- Turnkey is the session authority underneath that Wagmi state
+
+### `useAccount`
+
+`useAccount()` tells you what Wagmi currently thinks is connected. It does not tell you whether Turnkey auth exists by itself.
+
+Example:
+
+1. The user authenticates with Turnkey.
+2. `TurnkeyWagmiBridge` auto-connects the Turnkey connector.
+3. `useAccount()` returns the embedded Turnkey address and `isConnected: true`.
+
+If the user later connects an external wallet through AppKit:
+
+1. the external wallet can become the active Wagmi connector
+2. `useAccount()` now returns the external wallet address
+3. the Turnkey session still matters in the background
+
+If the Turnkey session then expires:
+
+1. `TurnkeyWagmiBridge` disconnects all Wagmi connectors
+2. `useAccount()` flips to `isConnected: false`
+3. the previously active external wallet is also dropped from Wagmi state
+
+If you need Turnkey-specific state, pair `useAccount()` with `useTurnkeySessionGate()`:
+
+```tsx
+const account = useAccount();
+const sessionGate = useTurnkeySessionGate();
+
+const turnkeyBackedAddress =
+  sessionGate.isSessionValid && account.isConnected
+    ? account.address
+    : undefined;
+```
+
+### `useWriteContract`
+
+`useWriteContract()` behaves like normal Wagmi contract writing, but the actual signing path depends on the active connector.
+
+When the active connector is Turnkey:
+
+1. `writeContract()` builds a transaction through Wagmi and Viem
+2. Wagmi sends that request through the Turnkey connector's provider
+3. the connector intercepts the transaction request
+4. it normalizes fields like `chainId`, `gas`, `gasLimit`, and fee params
+5. it prepares the transaction and sends it through the Turnkey-backed provider
+6. Turnkey signs as the embedded EVM account
+
+Concrete example:
+
+```tsx
+import { useWriteContract } from "wagmi";
+import { parseAbi } from "viem";
+
+const { writeContractAsync } = useWriteContract();
+
+await writeContractAsync({
+  address: "0xYourToken" as `0x${string}`,
+  abi: parseAbi(["function approve(address spender, uint256 amount) returns (bool)"]),
+  functionName: "approve",
+  args: ["0xSpender" as `0x${string}`, 123n],
+});
+```
+
+With the Turnkey connector active, this ends up on the connector's `eth_sendTransaction` path. The connector will:
+
+- ensure the request is on the right chain
+- normalize transaction shape
+- reconcile fee model issues
+- map `gasLimit` to `gas` if an upstream tool used that field
+- submit with the embedded Turnkey signer
+
+If the active connector is an external wallet instead, `useWriteContract()` writes through that external wallet, not through Turnkey.
+
+If there is no active Wagmi connector, or the Turnkey session has expired and the bridge has disconnected everything, `useWriteContract()` will fail the same way a normal disconnected Wagmi app would fail.
+
+### `useDisconnect`
+
+`useDisconnect()` only disconnects Wagmi connectors. It does not, by itself, terminate the Turnkey session.
+
+Example:
+
+```tsx
+import { useDisconnect } from "wagmi";
+
+const { disconnect } = useDisconnect();
+
+await disconnect();
+```
+
+What that does:
+
+- removes the active Wagmi connector from Wagmi state
+- makes `useAccount()` report disconnected
+
+What that does not do:
+
+- it does not call Turnkey logout
+- it does not invalidate the Turnkey session
+- it does not remove the embedded account from the package runtime store
+
+That means if the Turnkey session is still valid and `TurnkeyWagmiBridge` is mounted with `autoConnectTurnkey = true`, the bridge may reconnect the Turnkey connector again because the session is still healthy and no other connector is active.
+
+If you want to close the Turnkey session as well, use `useTurnkeySessionGate().disconnectAll()` instead:
+
+```tsx
+const sessionGate = useTurnkeySessionGate();
+
+await sessionGate.disconnectAll();
+```
+
+That path:
+
+- logs out of Turnkey
+- marks reconnect as required
+- causes the bridge to clear Wagmi connections
+
+### Practical Hook Rules
+
+Use these rules when wiring UI:
+
+- use `useAccount()` to know what Wagmi currently considers connected
+- use `useTurnkeySessionGate()` to know whether that connection should be trusted as Turnkey-session-valid
+- use `useWriteContract()` normally; it will route through Turnkey only when the Turnkey connector is the active Wagmi connector
+- use `useDisconnect()` when you only want to drop the active Wagmi connection
+- use `useTurnkeySessionGate().disconnectAll()` when you want to end the Turnkey session and force the whole integration back to an unauthenticated state
+
 ## Export Deep Dive
 
 ### `createTurnkeyConnector`

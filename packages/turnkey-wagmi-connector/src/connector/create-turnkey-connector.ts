@@ -107,114 +107,6 @@ function pushDebugEntry(event: string, payload: Record<string, unknown>) {
   window.__TURNKEY_WAGMI_DEBUG__ = entries.slice(-50);
 }
 
-const AGENT_DEBUG_SESSION = "29d098";
-const AGENT_DEBUG_ENDPOINT =
-  "http://127.0.0.1:7803/ingest/318784b0-4228-4bd7-b87c-1fca68c9e3fd";
-
-/** LiFi-style diamond executor: `callDiamondWithEIP2612Signature(address,uint256,uint256,...)`. */
-const CALL_DIAMOND_EIP2612_SELECTOR = "0xd7a08473";
-
-function agentDebugLog(entry: {
-  hypothesisId: string;
-  location: string;
-  message: string;
-  data?: Record<string, unknown>;
-  runId?: string;
-}) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  pushDebugEntry("agent-debug", {
-    sessionId: AGENT_DEBUG_SESSION,
-    ...entry,
-  });
-
-  void fetch(AGENT_DEBUG_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": AGENT_DEBUG_SESSION,
-    },
-    body: JSON.stringify({
-      sessionId: AGENT_DEBUG_SESSION,
-      timestamp: Date.now(),
-      ...entry,
-    }),
-  }).catch(() => {});
-}
-
-function summarizeTypedDataForAgentLog(typedData: TypedDataDefinition): Record<string, unknown> {
-  const domainRecord =
-    typedData.domain && typeof typedData.domain === "object"
-      ? (typedData.domain as Record<string, unknown>)
-      : undefined;
-  const message =
-    typedData.message && typeof typedData.message === "object"
-      ? (typedData.message as Record<string, unknown>)
-      : {};
-  const primaryType = typeof typedData.primaryType === "string" ? typedData.primaryType : "";
-
-  const deadlineRaw = message.deadline;
-  let deadlineNum: number | undefined;
-  if (typeof deadlineRaw === "bigint") {
-    deadlineNum = Number(deadlineRaw);
-  } else if (typeof deadlineRaw === "number" && Number.isFinite(deadlineRaw)) {
-    deadlineNum = deadlineRaw;
-  } else if (typeof deadlineRaw === "string" && /^\d+$/.test(deadlineRaw)) {
-    deadlineNum = Number(deadlineRaw);
-  }
-
-  const nowSec = Math.floor(Date.now() / 1000);
-  const secondsUntilDeadline =
-    deadlineNum !== undefined && Number.isFinite(deadlineNum) ? deadlineNum - nowSec : undefined;
-
-  const permitNonce = message.nonce;
-  const permitNoncePreview =
-    permitNonce !== undefined && permitNonce !== null ? String(permitNonce).slice(0, 24) : undefined;
-
-  return {
-    primaryType,
-    domainName: typeof domainRecord?.name === "string" ? domainRecord.name : undefined,
-    domainVersion: typeof domainRecord?.version === "string" ? domainRecord.version : undefined,
-    domainChainId: domainRecord?.chainId,
-    verifyingContract:
-      typeof domainRecord?.verifyingContract === "string"
-        ? domainRecord.verifyingContract.slice(0, 12)
-        : undefined,
-    messageKeys: Object.keys(message),
-    deadlineUnix: deadlineNum,
-    clientNowUnixSec: nowSec,
-    secondsUntilDeadline,
-    permitNoncePreview,
-  };
-}
-
-/**
- * Third static word is often the EIP-2612 `deadline` for this LiFi diamond selector (see 4byte.directory).
- * @param dataHex - Full `0x` calldata.
- */
-function tryDecodeDiamondEip2612LikelyDeadline(dataHex: string): bigint | undefined {
-  if (!dataHex.startsWith("0x") || dataHex.length < 10 + 64 * 3) {
-    return undefined;
-  }
-
-  if (dataHex.slice(0, 10).toLowerCase() !== CALL_DIAMOND_EIP2612_SELECTOR) {
-    return undefined;
-  }
-
-  const word2Hex = dataHex.slice(10 + 64 * 2, 10 + 64 * 3);
-  if (word2Hex.length !== 64) {
-    return undefined;
-  }
-
-  try {
-    return BigInt(`0x${word2Hex}`);
-  } catch {
-    return undefined;
-  }
-}
-
 function toProviderChain(chain: ConnectorChain): AddEthereumChainParameter {
   return {
     chainId: `0x${chain.id.toString(16)}`,
@@ -853,15 +745,7 @@ export async function prepareProviderTransactionRequest(
       ...sharedPrepareArgs,
       parameters: getPrepareTransactionParametersWithGasEstimate(normalizedTransaction),
     } as never);
-  } catch (firstPrepareError) {
-    pushDebugEntry("prepare-tx-fallback", {
-      phase: "viem-prepare-with-estimate-failed",
-      error:
-        firstPrepareError instanceof Error
-          ? { name: firstPrepareError.name, message: firstPrepareError.message }
-          : String(firstPrepareError),
-    });
-
+  } catch {
     let withGas: TransactionRequestParam = { ...normalizedTransaction };
 
     try {
@@ -891,21 +775,9 @@ export async function prepareProviderTransactionRequest(
             ...normalizedTransaction,
             gas: numberToHex(padded),
           };
-          pushDebugEntry("prepare-tx-fallback", {
-            phase: "eth_estimateGas-ok",
-            rawEstimate: raw.toString(),
-            paddedGasHex: withGas.gas,
-          });
         }
       }
-    } catch (estimateGasError) {
-      pushDebugEntry("prepare-tx-fallback", {
-        phase: "eth_estimateGas-failed",
-        error:
-          estimateGasError instanceof Error
-            ? { name: estimateGasError.name, message: estimateGasError.message }
-            : String(estimateGasError),
-      });
+    } catch {
       withGas = { ...normalizedTransaction };
     }
 
@@ -935,22 +807,6 @@ function wrapProvider(
     on: provider.on.bind(provider),
     removeListener: provider.removeListener.bind(provider),
     async request(args) {
-      const rawMethod = (args as ProviderRequestArgs).method;
-      // #region agent log
-      if (
-        rawMethod === "eth_signTypedData_v4" ||
-        rawMethod === "eth_signTypedData"
-      ) {
-        agentDebugLog({
-          hypothesisId: "SIGN_PATH",
-          location: "create-turnkey-connector.ts:wrapProvider.request",
-          message: "incoming sign typed data RPC method (before normalize)",
-          data: { method: rawMethod },
-          runId: "sign-path",
-        });
-      }
-      // #endregion
-
       const normalizedArgs = normalizeProviderRequestArgs(args as ProviderRequestArgs);
 
       if (normalizedArgs.method === "personal_sign") {
@@ -986,17 +842,7 @@ function wrapProvider(
           ethereumAddress: getAddress(signWith),
         });
 
-        const parsedTypedData = parseTypedData(typedData);
-        // #region agent log
-        agentDebugLog({
-          hypothesisId: "H1_H2_H4",
-          location: "create-turnkey-connector.ts:eth_signTypedData_v4",
-          message: "typed data snapshot before sign (permit deadline / domain)",
-          data: summarizeTypedDataForAgentLog(parsedTypedData),
-          runId: "pre-sign",
-        });
-        // #endregion
-        return account.signTypedData(parsedTypedData as never);
+        return account.signTypedData(parseTypedData(typedData) as never);
       }
 
       if (
@@ -1056,77 +902,6 @@ function wrapProvider(
         if (normalizedArgs.method === "eth_signTransaction") {
           return await provider.request(requestArgs as never);
         }
-
-        // #region agent log
-        if (normalizedArgs.method === "eth_sendTransaction") {
-          const dataHex = typeof preparedTransaction.data === "string" ? preparedTransaction.data : "";
-          const calldataSelector = dataHex.length >= 10 ? dataHex.slice(0, 10) : dataHex;
-          const diamondLikelyDeadline = tryDecodeDiamondEip2612LikelyDeadline(dataHex);
-          let latestBlockUnix: number | undefined;
-          let expiredVsLatestBlock: boolean | undefined;
-          if (diamondLikelyDeadline !== undefined) {
-            try {
-              const block = await provider.request({
-                method: "eth_getBlockByNumber",
-                params: ["latest", false],
-              } as never);
-              const blockRecord =
-                typeof block === "object" && block !== null
-                  ? (block as { timestamp?: string })
-                  : null;
-              const timestampHex = blockRecord?.timestamp;
-              if (typeof timestampHex === "string" && timestampHex.startsWith("0x")) {
-                latestBlockUnix = Number.parseInt(timestampHex.slice(2), 16);
-                if (!Number.isNaN(latestBlockUnix)) {
-                  expiredVsLatestBlock = diamondLikelyDeadline < BigInt(latestBlockUnix);
-                }
-              }
-            } catch {
-              latestBlockUnix = undefined;
-            }
-          }
-
-          const gasDbg = toBigIntQuantity(preparedTransaction.gas);
-          const maxFeeDbg = toBigIntQuantity(preparedTransaction.maxFeePerGas);
-          const gasPriceDbg = toBigIntQuantity(preparedTransaction.gasPrice);
-          const valueDbg = toBigIntQuantity(preparedTransaction.value) ?? 0n;
-          let impliedMaxCostWei: string | undefined;
-          if (gasDbg !== undefined) {
-            if (maxFeeDbg !== undefined) {
-              impliedMaxCostWei = (gasDbg * maxFeeDbg + valueDbg).toString();
-            } else if (gasPriceDbg !== undefined) {
-              impliedMaxCostWei = (gasDbg * gasPriceDbg + valueDbg).toString();
-            }
-          }
-
-          agentDebugLog({
-            hypothesisId: "H1_H2",
-            location: "create-turnkey-connector.ts:eth_sendTransaction",
-            message: "prepared tx before provider send",
-            data: {
-              chainId: preparedTransaction.chainId,
-              to:
-                typeof preparedTransaction.to === "string"
-                  ? preparedTransaction.to.slice(0, 12)
-                  : undefined,
-              calldataSelector,
-              calldataLengthChars: dataHex.length,
-              diamondLikelyDeadline:
-                diamondLikelyDeadline !== undefined ? diamondLikelyDeadline.toString() : undefined,
-              latestBlockUnix,
-              expiredVsLatestBlock,
-              gas: preparedTransaction.gas,
-              maxFeePerGas: preparedTransaction.maxFeePerGas,
-              maxPriorityFeePerGas: preparedTransaction.maxPriorityFeePerGas,
-              gasPrice: preparedTransaction.gasPrice,
-              value: preparedTransaction.value,
-              impliedMaxCostWei,
-              clientNowMs: Date.now(),
-            },
-            runId: "pre-send",
-          });
-        }
-        // #endregion
 
         const queueKey = getTransactionQueueKey(preparedTransaction);
         if (!queueKey) {
