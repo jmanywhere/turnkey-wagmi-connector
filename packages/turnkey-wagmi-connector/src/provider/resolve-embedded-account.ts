@@ -20,6 +20,10 @@ function isEvmAccount(account: WalletAccount) {
   );
 }
 
+/**
+ * Returns the first embedded Turnkey wallet account that looks like an EVM
+ * signer, if one is present.
+ */
 export function resolveEmbeddedEvmAccount(
   wallets: Wallet[],
 ): TurnkeyEmbeddedEvmAccount | undefined {

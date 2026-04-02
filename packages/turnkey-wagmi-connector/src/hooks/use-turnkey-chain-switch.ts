@@ -5,7 +5,11 @@ import type { Config } from "@wagmi/core";
 import { numberToHex, type Hex } from "viem";
 import { useTurnkeySessionGate } from "./use-turnkey-session-gate";
 
+/**
+ * Chain switching actions exposed by {@link useTurnkeyChainSwitch}.
+ */
 export type TurnkeyChainSwitch = {
+  /** Switches the active connector or Turnkey provider to the given EVM chain id. */
   switchChain: (chainId: number) => Promise<void>;
 };
 
@@ -35,6 +39,10 @@ async function switchTurnkeyConnectorChain(connector: {
   throw new Error("Turnkey connector does not expose a chain switch fallback.");
 }
 
+/**
+ * Returns a chain-switch helper that prefers Wagmi's active connector, while
+ * falling back to direct Turnkey provider switching when necessary.
+ */
 export function useTurnkeyChainSwitch(wagmiConfig: Config): TurnkeyChainSwitch {
   const sessionGate = useTurnkeySessionGate();
 

@@ -1,27 +1,55 @@
 {
   "name": "turnkey-wagmi-connector",
   "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
-  "exports": {
-    ".": "./src/index.ts"
+  "description": "Turnkey Embedded Wallet Kit integration for Wagmi v2.",
+  "keywords": [
+    "turnkey",
+    "wagmi",
+    "viem",
+    "wallet",
+    "connector",
+    "reown",
+    "appkit"
+  ],
+  "homepage": "https://github.com/jmanywhere/turnkey-wagmi-connector#readme",
+  "bugs": {
+    "url": "https://github.com/jmanywhere/turnkey-wagmi-connector/issues"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmanywhere/turnkey-wagmi-connector.git"
+  },
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "pnpm run build"
   },
   "dependencies": {
     "@turnkey/core": "1.14.0",
     "@turnkey/eip-1193-provider": "3.4.27",
     "@turnkey/sdk-types": "0.13.0",
     "@turnkey/viem": "0.14.27",
-    "@wagmi/core": "2.22.1",
-    "react": "19.2.4"
+    "@wagmi/core": "2.22.1"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.95.2",
@@ -34,6 +62,7 @@
     "@tanstack/react-query": "5.95.2",
     "@types/react": "^19.2.14",
     "@turnkey/react-wallet-kit": "1.11.0",
+    "react": "19.2.4",
     "viem": "2.47.6",
     "vitest": "^4.1.2",
     "wagmi": "2.19.5"

@@ -11,14 +11,19 @@ import {
 import { resolveEmbeddedEvmAccount } from "./resolve-embedded-account";
 import {
   resetTurnkeyRuntimeState,
-  setEmbeddedAccount,
   setReconnectRequired,
   setTurnkeyRuntimeEvent,
   setTurnkeyRuntimeState,
 } from "./runtime-store";
+import { getTurnkeySessionExpiryTimestamp } from "./get-session-expiry";
 
+/**
+ * Props for {@link TurnkeySessionProvider}.
+ */
 export type TurnkeySessionProviderProps = PropsWithChildren<{
+  /** Turnkey Wallet Kit configuration passed through to `TurnkeyProvider`. */
   turnkeyConfig: TurnkeyProviderConfig;
+  /** Optional Turnkey lifecycle callbacks to compose with the package callbacks. */
   callbacks?: TurnkeyCallbacks;
 }>;
 
@@ -26,16 +31,16 @@ function TurnkeyRuntimeSync() {
   const turnkey = useTurnkey();
 
   useEffect(() => {
+    const embeddedAccount = resolveEmbeddedEvmAccount(turnkey.wallets);
+
     setTurnkeyRuntimeState({
       authState: turnkey.authState,
       session: turnkey.session,
-      sessionExpiresAt: turnkey.session?.expiry
-        ? Number(turnkey.session.expiry) * 1000
-        : undefined,
+      sessionExpiresAt: getTurnkeySessionExpiryTimestamp(turnkey.session),
       httpClient: turnkey.httpClient,
       wallets: turnkey.wallets,
+      embeddedAccount,
     });
-    setEmbeddedAccount(resolveEmbeddedEvmAccount(turnkey.wallets));
   }, [
     turnkey.authState,
     turnkey.httpClient,
@@ -49,6 +54,10 @@ function TurnkeyRuntimeSync() {
   return null;
 }
 
+/**
+ * Mirrors Turnkey auth/session state into the connector runtime store so Wagmi
+ * can gate access to the embedded wallet.
+ */
 export function TurnkeySessionProvider({
   children,
   turnkeyConfig,

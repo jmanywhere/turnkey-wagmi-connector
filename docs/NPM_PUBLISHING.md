@@ -4,25 +4,18 @@ This document explains how to publish `turnkey-wagmi-connector` to npm.
 
 ## Current State
 
-The package is **not publish-ready yet**.
+The package is publish-ready from a packaging perspective.
 
-Current blockers:
+Current publish shape:
 
-- `packages/turnkey-wagmi-connector/package.json` has `"private": true`
-- package `main`, `module`, and `types` point at `src/index.ts`
-- there is no dedicated `dist/` build output
-- there is no `files` allowlist in the package manifest
-
-Before you publish, fix those items first.
+- `packages/turnkey-wagmi-connector/package.json` points `main`, `module`, `types`, and `exports` at `dist/`
+- the package build emits JavaScript and declaration files into `dist/`
+- the manifest includes a `files` allowlist so demo app files are excluded from the npm tarball
+- `prepack` rebuilds the package before `npm pack` or `npm publish`
 
 ## Recommended Package Hardening
 
-Update `packages/turnkey-wagmi-connector/package.json`:
-
-1. change `"private": true` to `"private": false`
-2. point outputs to built files
-3. define a `files` list
-4. keep app-level libraries as peers
+Keep `packages/turnkey-wagmi-connector/package.json` in this shape:
 
 Recommended shape:
 
@@ -30,7 +23,6 @@ Recommended shape:
 {
   "name": "turnkey-wagmi-connector",
   "version": "0.1.0",
-  "private": false,
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -38,12 +30,17 @@ Recommended shape:
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     }
   },
   "files": [
-    "dist"
-  ]
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "prepack": "pnpm run build"
+  }
 }
 ```
 
@@ -168,41 +165,27 @@ npm publish
 
 Suggested sequence:
 
-1. make package manifest publish-ready
-2. ensure `dist/` builds cleanly
-3. run `pnpm typecheck`
-4. run `pnpm build`
-5. run `pnpm --filter turnkey-wagmi-connector pack`
-6. commit the release changes
-7. tag the release if you want git tags
-8. run `npm publish --access public`
+1. run `pnpm --filter turnkey-wagmi-connector typecheck`
+2. run `pnpm --filter turnkey-wagmi-connector test`
+3. run `pnpm --filter turnkey-wagmi-connector build`
+4. run `pnpm --filter turnkey-wagmi-connector pack`
+5. inspect the tarball contents
+6. bump the package version
+7. run `npm publish`
 
 ## Optional Improvements Before Publishing
 
 These are not required, but they would improve the package:
 
-- add a `prepublishOnly` script to run the package build automatically
+- add a `prepublishOnly` script to run typecheck and tests automatically
 - add automated tests for connector behavior and session expiry handling
 - add changesets or another release/versioning workflow
 - add CI to verify typecheck and build before publish
 - add a package-specific README inside `packages/turnkey-wagmi-connector`
 
-## Example `prepublishOnly`
-
-Inside `packages/turnkey-wagmi-connector/package.json`:
-
-```json
-{
-  "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "prepublishOnly": "pnpm build"
-  }
-}
-```
-
 ## Important Notes
 
 - publish only the package directory, not the monorepo root
-- do not publish while `"private": true` is still set
-- do not publish while outputs still point at `src/*.ts`
+- do not publish until `pack` shows only the expected package files
+- make sure the version is bumped before each release
 - make sure workspace-only import assumptions are removed before publishing

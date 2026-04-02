@@ -18,15 +18,24 @@ const emit = () => {
   for (const listener of listeners) listener();
 };
 
+/**
+ * Reads the current in-memory Turnkey runtime snapshot.
+ */
 export function getTurnkeyRuntimeState(): TurnkeyRuntimeState {
   return state;
 }
 
+/**
+ * Subscribes to runtime-store updates.
+ */
 export function subscribeTurnkeyRuntime(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
+/**
+ * Applies a partial update or functional update to the runtime store.
+ */
 export function setTurnkeyRuntimeState(
   updater:
     | Partial<TurnkeyRuntimeState>
@@ -42,11 +51,17 @@ export function setTurnkeyRuntimeState(
   emit();
 }
 
+/**
+ * Resets the runtime store to its unauthenticated default state.
+ */
 export function resetTurnkeyRuntimeState() {
   state = DEFAULT_STATE;
   emit();
 }
 
+/**
+ * Records the latest Turnkey session lifecycle event.
+ */
 export function setTurnkeyRuntimeEvent(event: TurnkeySessionEvent) {
   setTurnkeyRuntimeState((current) => ({
     ...current,
@@ -54,6 +69,10 @@ export function setTurnkeyRuntimeEvent(event: TurnkeySessionEvent) {
   }));
 }
 
+/**
+ * Marks whether the app should prompt the user to reconnect the Turnkey
+ * session, optionally storing the most recent error.
+ */
 export function setReconnectRequired(
   reconnectRequired: boolean,
   lastError?: string,
@@ -65,6 +84,9 @@ export function setReconnectRequired(
   }));
 }
 
+/**
+ * Persists the currently active Wagmi connector id.
+ */
 export function setActiveConnectorId(activeConnectorId?: string) {
   setTurnkeyRuntimeState((current) => ({
     ...current,
@@ -72,6 +94,9 @@ export function setActiveConnectorId(activeConnectorId?: string) {
   }));
 }
 
+/**
+ * Stores the embedded EVM account resolved from the current Turnkey wallets.
+ */
 export function setEmbeddedAccount(
   embeddedAccount?: TurnkeyEmbeddedEvmAccount,
 ) {

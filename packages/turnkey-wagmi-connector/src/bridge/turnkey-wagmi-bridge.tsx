@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useTransition } from "react";
 import { connect, disconnect, getConnections, getConnectors, type Config } from "@wagmi/core";
+import { useConfig } from "wagmi";
 import { AuthState, useTurnkey } from "@turnkey/react-wallet-kit";
 import {
   setActiveConnectorId,
@@ -9,10 +10,19 @@ import {
 } from "../provider/runtime-store";
 import { useTurnkeySessionGate } from "../hooks/use-turnkey-session-gate";
 
+/**
+ * Props for {@link TurnkeyWagmiBridge}.
+ */
 export type TurnkeyWagmiBridgeProps = {
-  wagmiConfig: Config;
+  /** Connector id used to locate the Turnkey connector in the active Wagmi config. */
   turnkeyConnectorId?: string;
+  /**
+   * Reserved for future session refresh timing controls.
+   *
+   * @deprecated This prop is currently ignored by the implementation.
+   */
   refreshLeadTimeMs?: number;
+  /** Automatically connects the Turnkey connector after authentication. */
   autoConnectTurnkey?: boolean;
 };
 
@@ -46,11 +56,14 @@ async function disconnectForExpiredSession(
   await logout().catch(() => undefined);
 }
 
+/**
+ * Keeps Wagmi connection state aligned with the current Turnkey session.
+ */
 export function TurnkeyWagmiBridge({
-  wagmiConfig,
   turnkeyConnectorId = "turnkey",
   autoConnectTurnkey = true,
 }: TurnkeyWagmiBridgeProps) {
+  const wagmiConfig = useConfig();
   const turnkey = useTurnkey();
   const sessionGate = useTurnkeySessionGate();
   const [, startTransition] = useTransition();

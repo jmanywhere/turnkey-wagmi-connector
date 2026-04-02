@@ -21,9 +21,15 @@ import {
 import { prepareTransactionRequest as viemPrepareTransactionRequest } from "viem/actions";
 import { getTurnkeyRuntimeState } from "../provider/runtime-store";
 
+/**
+ * Configuration for the Turnkey Wagmi connector.
+ */
 export type CreateTurnkeyConnectorOptions = {
+  /** Supported chains for the Turnkey-backed wallet session. */
   chains: readonly [Chain, ...Chain[]];
+  /** Display name shown by Wagmi/AppKit for this connector. */
   walletLabel?: string;
+  /** Optional connector icon data understood by Wagmi consumers. */
   icon?: string;
 };
 
@@ -273,6 +279,9 @@ function normalizeQuantity(value: unknown): Hex | undefined {
   return undefined;
 }
 
+/**
+ * Normalizes viem-style symbolic transaction types into RPC quantity hex values.
+ */
 export function normalizeTransactionType(value: unknown): Hex | undefined {
   if (value === undefined || value === null) {
     return undefined;
@@ -430,6 +439,10 @@ const UPSTREAM_GAS_EXCESS_OVER_ESTIMATE = 2n;
 const ESTIMATE_GAS_HEADROOM_NUM = 130n;
 const ESTIMATE_GAS_HEADROOM_DEN = 100n;
 
+/**
+ * Merges a viem-prepared transaction with the original dapp request while
+ * preserving validated fee fields and capping obviously padded upstream gas.
+ */
 export function mergePreparedTransactionRequest(
   originalTransaction: TransactionRequestParam,
   preparedTransaction: TransactionRequestParam,
@@ -499,6 +512,10 @@ function reconcileFeeModel(transaction: TransactionRequestParam): TransactionReq
   return transaction;
 }
 
+/**
+ * Filters and normalizes a provider transaction payload into the RPC shape that
+ * Turnkey and viem expect.
+ */
 export function normalizeTransactionRequestParam(transaction: TransactionRequestParam): TransactionRequestParam {
   const normalizedInput = {
     ...transaction,
@@ -703,6 +720,11 @@ function getTransactionQueueKey(transaction: TransactionRequestParam): ReceiptWa
   return `${transaction.from.toLowerCase()}:${normalizedChainId.toLowerCase()}` as ReceiptWaitKey;
 }
 
+/**
+ * Runs viem transaction preparation against the current Turnkey provider and
+ * falls back to a provider gas estimate when the first preparation attempt
+ * fails.
+ */
 export async function prepareProviderTransactionRequest(
   provider: TurnkeyConnectorProvider,
   transaction: TransactionRequestParam,
@@ -964,6 +986,9 @@ function wrapProvider(
   } as TurnkeyConnectorProvider;
 }
 
+/**
+ * Creates a Wagmi connector backed by the active Turnkey embedded EVM wallet.
+ */
 export function createTurnkeyConnector({
   chains,
   walletLabel = "Turnkey Embedded Wallet",

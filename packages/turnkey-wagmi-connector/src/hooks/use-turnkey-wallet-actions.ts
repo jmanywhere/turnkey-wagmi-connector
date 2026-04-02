@@ -1,17 +1,20 @@
 "use client";
 
 import { useMemo } from "react";
-import { createWalletClient, custom, http, type Chain as ViemChain, type Hash, type Hex } from "viem";
+import { createWalletClient, custom, type Chain as ViemChain, type Hash, type Hex } from "viem";
 import type {
   SendTransactionParameters,
   SignMessageParameters,
   SignTypedDataParameters,
 } from "viem";
 import { createAccount } from "@turnkey/viem";
-import { useChainId, useChains } from "wagmi";
+import { useChainId, useConfig } from "wagmi";
 import { useTurnkey } from "@turnkey/react-wallet-kit";
 import { useTurnkeySessionGate } from "./use-turnkey-session-gate";
 
+/**
+ * Direct Turnkey-backed wallet actions that bypass generic provider RPC flows.
+ */
 export type TurnkeyWalletActions = {
   address?: `0x${string}`;
   chainId?: number;
@@ -26,22 +29,18 @@ export type TurnkeyWalletActions = {
   ) => Promise<Hash>;
 };
 
-function getRpcUrl(chain: ViemChain): string | undefined {
-  return (
-    chain.rpcUrls.default.http[0] ??
-    chain.rpcUrls.public?.http?.[0]
-  );
-}
-
+/**
+ * Returns viem wallet actions backed by the active Turnkey embedded account.
+ */
 export function useTurnkeyWalletActions(): TurnkeyWalletActions {
+  const wagmiConfig = useConfig();
   const turnkey = useTurnkey();
   const { embeddedAccount } = useTurnkeySessionGate();
-  const chains = useChains();
   const chainId = useChainId();
 
   const chain = useMemo(
-    () => chains.find((item) => item.id === chainId) ?? chains[0],
-    [chainId, chains],
+    () => wagmiConfig.chains.find((item) => item.id === chainId) ?? wagmiConfig.chains[0],
+    [chainId, wagmiConfig.chains],
   );
 
   const walletPromise = useMemo(() => {
@@ -49,14 +48,18 @@ export function useTurnkeyWalletActions(): TurnkeyWalletActions {
       return undefined;
     }
 
-    const rpcUrl = getRpcUrl(chain);
-    const transport = rpcUrl
-      ? http(rpcUrl)
-      : custom({
-          async request() {
-            throw new Error("No RPC URL configured for the active chain.");
-          },
-        });
+    const publicClient = wagmiConfig.getClient({ chainId: chain.id });
+    const transport =
+      publicClient
+        ? custom({
+            request: publicClient.request,
+          })
+        :
+      custom({
+        async request() {
+          throw new Error("No Wagmi transport configured for the active chain.");
+        },
+      });
 
     return createAccount({
       client: turnkey.httpClient as never,
@@ -70,7 +73,13 @@ export function useTurnkeyWalletActions(): TurnkeyWalletActions {
         transport,
       }),
     );
-  }, [chain, embeddedAccount, turnkey.httpClient, turnkey.session?.organizationId]);
+  }, [
+    chain,
+    embeddedAccount,
+    turnkey.httpClient,
+    turnkey.session?.organizationId,
+    wagmiConfig,
+  ]);
 
   return {
     address: embeddedAccount?.address,

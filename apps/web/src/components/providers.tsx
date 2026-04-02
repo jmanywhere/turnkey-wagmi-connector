@@ -32,7 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <TurnkeySessionProvider turnkeyConfig={turnkeyProviderConfig}>
         <WagmiProvider config={wagmiConfig}>
           <AppKitProvider {...appKitConfig}>
-            <TurnkeyWagmiBridge wagmiConfig={wagmiConfig} />
+            <TurnkeyWagmiBridge />
             {children}
           </AppKitProvider>
         </WagmiProvider>

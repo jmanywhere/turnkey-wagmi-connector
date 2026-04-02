@@ -114,7 +114,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <TurnkeySessionProvider turnkeyConfig={turnkeyConfig}>
         <WagmiProvider config={wagmiConfig}>
-          <TurnkeyWagmiBridge wagmiConfig={wagmiConfig} />
+          <TurnkeyWagmiBridge />
           {children}
         </WagmiProvider>
       </TurnkeySessionProvider>
@@ -172,7 +172,6 @@ Props:
 
 ```ts
 type TurnkeyWagmiBridgeProps = {
-  wagmiConfig: Config;
   turnkeyConnectorId?: string;
   refreshLeadTimeMs?: number;
   autoConnectTurnkey?: boolean;

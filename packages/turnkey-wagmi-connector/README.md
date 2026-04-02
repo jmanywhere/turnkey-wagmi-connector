@@ -44,10 +44,9 @@ Peer dependencies expected by the consuming app:
 pnpm add wagmi viem react @tanstack/react-query @turnkey/react-wallet-kit
 ```
 
-The package currently exports source files directly from `src/index.ts`. In a monorepo or Next.js workspace consumer, that usually means one of:
+The published package ships compiled JS and declaration files from `dist/`.
 
-- transpile the workspace package, for example with `transpilePackages: ["turnkey-wagmi-connector"]`
-- or build/publish a compiled package before consuming it outside this repo
+If you consume the workspace package directly inside this monorepo, keep `transpilePackages: ["turnkey-wagmi-connector"]` in Next.js so local development continues to work against the source package.
 
 ## Hard Requirements For A Working Integration
 
@@ -176,7 +175,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <TurnkeySessionProvider turnkeyConfig={turnkeyConfig}>
         <WagmiProvider config={wagmiConfig}>
-          <TurnkeyWagmiBridge wagmiConfig={wagmiConfig} />
+          <TurnkeyWagmiBridge />
           {children}
         </WagmiProvider>
       </TurnkeySessionProvider>
@@ -194,7 +193,7 @@ Use this order:
 3. `WagmiProvider`
 4. `TurnkeyWagmiBridge`
 
-`TurnkeySessionProvider` has to be above the bridge because the bridge reads Turnkey auth/session state. The bridge has to be inside `WagmiProvider` because it calls Wagmi core actions against your `wagmiConfig`.
+`TurnkeySessionProvider` has to be above the bridge because the bridge reads Turnkey auth/session state. The bridge has to be inside `WagmiProvider` because it reads the active Wagmi config from context and calls Wagmi core actions against it.
 
 ## Reown / AppKit Integration
 
@@ -454,7 +453,6 @@ Your callbacks still run. The package does not replace them; it composes them.
 
 ```ts
 type TurnkeyWagmiBridgeProps = {
-  wagmiConfig: Config;
   turnkeyConnectorId?: string;
   refreshLeadTimeMs?: number;
   autoConnectTurnkey?: boolean;
@@ -474,6 +472,7 @@ Behavior to be aware of:
 
 - `autoConnectTurnkey` defaults to `true`
 - it mounts once per Wagmi config
+- it reads the active Wagmi config from `WagmiProvider` via `useConfig()`
 - it uses `wagmiConfig.chains[0]` as the initial auto-connect chain
 - `refreshLeadTimeMs` is present in the prop type but is not currently read by the implementation
 
