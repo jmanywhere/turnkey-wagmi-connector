@@ -83,6 +83,7 @@ pnpm build
 
 ## Documentation
 
+- [Package README](./packages/turnkey-wagmi-connector/README.md)
 - [Testing the demo](./docs/TESTING_DEMO.md)
 - [Package usage](./docs/PACKAGE_USAGE.md)
 - [Publishing to npm](./docs/NPM_PUBLISHING.md)

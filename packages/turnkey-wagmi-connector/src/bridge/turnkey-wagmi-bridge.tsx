@@ -19,8 +19,23 @@ export type TurnkeyWagmiBridgeProps = {
 async function disconnectAllConnections(config: Config) {
   const connections = getConnections(config);
   for (const connection of connections) {
-    await disconnect(config, { connector: connection.connector });
+    await disconnect(config, { connector: connection.connector }).catch(async () => {
+      await connection.connector.disconnect().catch(() => undefined);
+    });
   }
+
+  await Promise.allSettled([
+    config.storage?.removeItem("recentConnectorId"),
+    config.storage?.removeItem("state"),
+  ]);
+
+  config.setState((current) => ({
+    ...current,
+    connections: new Map(),
+    current: null,
+    status: "disconnected",
+  }));
+  setActiveConnectorId(undefined);
 }
 
 async function disconnectForExpiredSession(
@@ -63,14 +78,21 @@ export function TurnkeyWagmiBridge({
       void connect(wagmiConfig, {
         connector,
         chainId: wagmiConfig.chains[0]?.id,
-      }).catch((error: unknown) => {
-        setReconnectRequired(true, error instanceof Error ? error.message : String(error));
-      });
+      })
+        .then(() => {
+          setReconnectRequired(false);
+          setActiveConnectorId(turnkeyConnectorId);
+        })
+        .catch((error: unknown) => {
+          setReconnectRequired(true, error instanceof Error ? error.message : String(error));
+        });
     });
   }, [
     autoConnectTurnkey,
     sessionGate.embeddedAccount,
+    sessionGate.isSessionValid,
     turnkey.authState,
+    turnkey.session,
     turnkeyConnectorId,
     wagmiConfig,
   ]);

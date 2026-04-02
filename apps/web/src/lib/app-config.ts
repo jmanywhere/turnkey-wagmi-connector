@@ -38,6 +38,27 @@ function getRpcUrl(chainId: number, fallback: string) {
   return rpcOverrides[chainId as keyof typeof rpcOverrides] || fallback;
 }
 
+const appNetworks = appChains.map((chain) => {
+  const rpcUrl = getRpcUrl(chain.id, chain.rpcUrls.default.http[0] ?? "");
+  const publicRpcUrls = "public" in chain.rpcUrls ? chain.rpcUrls.public : undefined;
+  return {
+    ...chain,
+    rpcUrls: {
+      ...chain.rpcUrls,
+      default: {
+        ...chain.rpcUrls.default,
+        http: [rpcUrl],
+      },
+      public: publicRpcUrls
+        ? {
+            ...publicRpcUrls,
+            http: [rpcUrl],
+          }
+        : undefined,
+    },
+  };
+}) as unknown as [AppKitNetwork, ...AppKitNetwork[]];
+
 export const turnkeyConnector = createTurnkeyConnector({
   chains: appChains,
   walletLabel: "Turnkey Session",
@@ -45,12 +66,12 @@ export const turnkeyConnector = createTurnkeyConnector({
 
 export const wagmiAdapter = new WagmiAdapter({
   projectId: publicEnv.reownProjectId || "demo-project-id",
-  networks: appChains as unknown as [AppKitNetwork, ...AppKitNetwork[]],
+  networks: appNetworks,
   connectors: [turnkeyConnector],
   transports: Object.fromEntries(
-    appChains.map((chain) => [
-      chain.id,
-      http(getRpcUrl(chain.id, chain.rpcUrls.default.http[0] ?? "")),
+    appNetworks.map((chain) => [
+      Number(chain.id),
+      http(getRpcUrl(Number(chain.id), chain.rpcUrls.default.http[0] ?? "")),
     ]),
   ),
   ssr: true,
@@ -61,7 +82,7 @@ export const wagmiConfig = wagmiAdapter.wagmiConfig;
 export const appKitConfig: Omit<AppKitProviderProps, "children"> = {
   projectId: publicEnv.reownProjectId || "demo-project-id",
   adapters: [wagmiAdapter],
-  networks: appChains as unknown as [AppKitNetwork, ...AppKitNetwork[]],
+  networks: appNetworks,
   defaultNetwork: base,
   metadata: {
     name: "Turnkey Wagmi Connector Demo",
