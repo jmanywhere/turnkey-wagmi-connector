@@ -1,125 +1,235 @@
 # turnkey-wagmi-connector
 
-Turnkey Embedded Wallet Kit integration for Wagmi v2 and v3, with separate Next.js fixtures for:
+Turnkey Embedded Wallet Kit integration for Wagmi v2 and v3.
 
-- Turnkey embedded EVM wallets can appear as a connected Wagmi wallet
-- `@lifi/widget` can reuse that Wagmi connection
-- Reown AppKit can switch from the Turnkey connector to an external wallet
-- Turnkey session refresh is attempted explicitly
-- all active Wagmi connectors are disconnected if the Turnkey session is lost
+This package makes a Turnkey embedded EVM wallet behave like a normal Wagmi connector, keeps Wagmi connection state gated by the Turnkey session, and exposes direct Turnkey-backed wallet helpers when you need to bypass generic provider RPC flows.
 
-## Workspace
+## Package Version
 
-```text
-apps/web
-apps/web-wagmi3
-packages/turnkey-wagmi-connector
-```
+The source of truth for package versioning is [`packages/turnkey-wagmi-connector/package.json`](./packages/turnkey-wagmi-connector/package.json).
 
-`packages/turnkey-wagmi-connector` contains:
+Current repo version:
 
+- `turnkey-wagmi-connector@0.1.0`
+
+When you cut a release, bump the version there first. The root README should reflect that published version.
+
+## What This Package Solves
+
+- Turnkey authentication and session state stay in `@turnkey/react-wallet-kit`
+- the embedded Turnkey EVM wallet becomes a Wagmi connector
+- the Turnkey connector can auto-connect after auth
+- Turnkey session expiry can disconnect every active Wagmi connector
+- external wallets can take over as the active Wagmi connector without bypassing Turnkey session authority
+- direct message signing, typed-data signing, and transaction submission can run through `@turnkey/viem`
+
+The package exports:
+
+- `createTurnkeyConnector`
 - `TurnkeySessionProvider`
 - `TurnkeyWagmiBridge`
-- `createTurnkeyConnector`
 - `useTurnkeySessionGate`
+- `useTurnkeyChainSwitch`
 - `useTurnkeyWalletActions`
 
-`apps/web` contains:
+## Compatibility
 
-- `/widget` for LI.FI + Reown + Turnkey session orchestration
-- `/sandbox` for direct Turnkey signing and transaction helpers on Base Sepolia
+- supported `wagmi` range: `>=2.19.5 <4`
+- supported `@wagmi/core` range: `>=2.21.2 <4`
+- supported `viem` range: `2.x`
+- supported `react` range: `>=18`
+- Reown/AppKit support is app-level integration, not part of the package compatibility contract
+- testing to date has only covered EVM flows
 
-`apps/web-wagmi3` contains:
-
-- `/` for a pure Wagmi 3 + Turnkey validation flow without Reown/AppKit
-- `/widget` for the Wagmi 3 + Reown/AppKit + LI.FI comparison flow
-
-## Compatibility Matrix
-
-- `packages/turnkey-wagmi-connector` supports `wagmi >=2.19.5 <4` and `@wagmi/core >=2.21.2 <4`
-- `apps/web` is the Wagmi 2 + Reown/AppKit acceptance fixture
-- `apps/web-wagmi3` is the Wagmi 3 acceptance fixture with both pure and Reown/LI.FI routes
-
-## Stack
-
-- `next@16.2.1`
-- `react@19.2.4`
-- `wagmi@2.19.5` in `apps/web`
-- `wagmi@3.6.0` in `apps/web-wagmi3`
-- `@wagmi/core@3.4.1` in `apps/web-wagmi3`
-- `viem@2.47.6`
-- `@turnkey/react-wallet-kit@1.11.0`
-- `@turnkey/eip-1193-provider@3.4.27`
-- `@turnkey/viem@0.14.27`
-- `@lifi/widget@3.40.12`
-- `@reown/appkit@1.8.19`
-- `@reown/appkit-adapter-wagmi@1.8.19`
-
-## Environment
-
-Copy `apps/web/.env.example` or `apps/web-wagmi3/.env.example` and provide:
+Expected peer dependencies in the consuming app:
 
 ```bash
-NEXT_PUBLIC_TURNKEY_ORGANIZATION_ID=
-NEXT_PUBLIC_TURNKEY_AUTH_PROXY_CONFIG_ID=
-NEXT_PUBLIC_TURNKEY_API_BASE_URL=https://api.turnkey.com
-
-NEXT_PUBLIC_MAINNET_RPC_URL=
-NEXT_PUBLIC_BASE_RPC_URL=
-NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL=
+pnpm add turnkey-wagmi-connector wagmi @wagmi/core viem react @tanstack/react-query @turnkey/react-wallet-kit
 ```
 
-`apps/web` also needs:
+## Integration Rules
 
-```bash
-NEXT_PUBLIC_REOWN_PROJECT_ID=
-NEXT_PUBLIC_ARBITRUM_RPC_URL=
-NEXT_PUBLIC_OPTIMISM_RPC_URL=
-NEXT_PUBLIC_POLYGON_RPC_URL=
+These are the requirements that matter in practice:
+
+1. Mount `TurnkeySessionProvider` above every component that uses this package.
+2. Mount `TurnkeyWagmiBridge` inside the `WagmiProvider` tree, once per Wagmi config.
+3. Use the same chain set consistently across:
+   - `createTurnkeyConnector({ chains })`
+   - Wagmi `chains`
+   - Wagmi `transports`
+   - Reown/AppKit `networks` if you use AppKit
+4. Give every target chain a real RPC URL in both chain metadata and Wagmi transports.
+5. Make sure the Turnkey account has an embedded EVM wallet.
+6. Establish Turnkey auth before expecting the connector to authorize or connect.
+
+If those assumptions are wrong, failures usually show up as:
+
+- `ProviderNotFoundError`
+- Turnkey never appears as a connected Wagmi wallet
+- direct wallet actions throw because no embedded account or no RPC URL is available
+- AppKit or swap widgets silently fall back to public default RPCs
+
+## Quick Start
+
+This is the smallest reliable integration shape:
+
+```tsx
+"use client";
+
+import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createConfig, http, WagmiProvider } from "wagmi";
+import { base, mainnet } from "viem/chains";
+import type { TurnkeyProviderConfig } from "@turnkey/react-wallet-kit";
+import {
+  TurnkeySessionProvider,
+  TurnkeyWagmiBridge,
+  createTurnkeyConnector,
+} from "turnkey-wagmi-connector";
+
+const chains = [mainnet, base] as const;
+
+function withRpcOverride<TChain extends (typeof chains)[number]>(
+  chain: TChain,
+  rpcUrl: string,
+) {
+  return {
+    ...chain,
+    rpcUrls: {
+      ...chain.rpcUrls,
+      default: {
+        ...chain.rpcUrls.default,
+        http: [rpcUrl || chain.rpcUrls.default.http[0] || ""],
+      },
+      public: chain.rpcUrls.public
+        ? {
+            ...chain.rpcUrls.public,
+            http: [rpcUrl || chain.rpcUrls.public.http[0] || ""],
+          }
+        : undefined,
+    },
+  };
+}
+
+const appChains = [
+  withRpcOverride(mainnet, process.env.NEXT_PUBLIC_MAINNET_RPC_URL || ""),
+  withRpcOverride(base, process.env.NEXT_PUBLIC_BASE_RPC_URL || ""),
+] as const;
+
+const turnkeyConnector = createTurnkeyConnector({
+  chains: appChains,
+  walletLabel: "Turnkey Session",
+});
+
+const wagmiConfig = createConfig({
+  chains: appChains,
+  connectors: [turnkeyConnector],
+  transports: {
+    [mainnet.id]: http(appChains[0].rpcUrls.default.http[0]),
+    [base.id]: http(appChains[1].rpcUrls.default.http[0]),
+  },
+  ssr: true,
+});
+
+const turnkeyConfig: TurnkeyProviderConfig = {
+  apiBaseUrl:
+    process.env.NEXT_PUBLIC_TURNKEY_API_BASE_URL || "https://api.turnkey.com",
+  organizationId: process.env.NEXT_PUBLIC_TURNKEY_ORGANIZATION_ID || "",
+  authProxyConfigId:
+    process.env.NEXT_PUBLIC_TURNKEY_AUTH_PROXY_CONFIG_ID || undefined,
+  auth: {
+    autoRefreshSession: false,
+    methods: {
+      emailOtpAuthEnabled: true,
+      smsOtpAuthEnabled: false,
+      passkeyAuthEnabled: false,
+      walletAuthEnabled: false,
+      googleOauthEnabled: false,
+      appleOauthEnabled: false,
+      xOauthEnabled: false,
+      discordOauthEnabled: false,
+      facebookOauthEnabled: false,
+    },
+    methodOrder: ["email"],
+  },
+};
+
+export function AppProviders({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient());
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TurnkeySessionProvider turnkeyConfig={turnkeyConfig}>
+        <WagmiProvider config={wagmiConfig}>
+          <TurnkeyWagmiBridge />
+          {children}
+        </WagmiProvider>
+      </TurnkeySessionProvider>
+    </QueryClientProvider>
+  );
+}
 ```
 
-`apps/web-wagmi3` also needs `NEXT_PUBLIC_REOWN_PROJECT_ID=` if you want to use `/widget`.
+Provider order matters:
 
-The demo is wired for:
+1. `QueryClientProvider`
+2. `TurnkeySessionProvider`
+3. `WagmiProvider`
+4. `TurnkeyWagmiBridge`
 
-- Turnkey email OTP auth only
-- explicit `refreshSession()` handling
-- auto refresh disabled in EWK config
-- first embedded EVM account only
+## Reown / AppKit Notes
 
-## Development
+If you use Reown/AppKit, keep Turnkey and AppKit on the same network definitions and the same RPC URLs.
 
-```bash
-pnpm install
-pnpm dev
-```
+The working pattern used in the demo app is:
 
-For the Wagmi 3 fixture:
+- clone each AppKit network
+- override `rpcUrls.default.http`
+- override `rpcUrls.public.http`
+- pass those same networks into AppKit
+- pass explicit `http(...)` transports into Wagmi
 
-```bash
-pnpm dev:wagmi3
-```
+That prevents RPC traffic from falling back to public default endpoints. In this workspace, the Reown/AppKit and Wagmi chain setup is centralized in `apps/web/src/lib/app-config.ts`, and RPC values are wired from `apps/web/.env.local`.
 
-Useful commands:
+## Hook Behavior
 
-```bash
-pnpm typecheck
-pnpm build
-```
+Standard Wagmi hooks still behave like standard Wagmi hooks. What changes is the active connector and its lifecycle.
+
+- if the active connector is the Turnkey connector, Wagmi writes and signatures go through the Turnkey-backed provider
+- if the active connector is an external wallet, Wagmi writes and signatures go through that wallet instead
+- if the Turnkey session expires or becomes unauthenticated, `TurnkeyWagmiBridge` disconnects all active Wagmi connectors
+
+Use the hooks like this:
+
+- `useAccount()` tells you what Wagmi currently considers connected
+- `useWriteContract()` routes through the active Wagmi connector
+- `useDisconnect()` only disconnects Wagmi, not Turnkey auth
+- `useTurnkeySessionGate()` gives you Turnkey-session-aware UI state and `disconnectAll()`
+- `useTurnkeyWalletActions()` exposes direct Turnkey-backed signing and transaction helpers
+
+## Common Pitfalls
+
+- duplicate runtime copies of `wagmi` or `@turnkey/react-wallet-kit`
+- mismatched chain sets between connector, Wagmi config, and AppKit config
+- missing RPC overrides, which can make integrations silently fall back to public endpoints
+- assuming swap-token balance is enough for execution on L2s when the wallet lacks enough native gas token
+- LI.FI-style payloads may send `gasLimit` instead of `gas`; the connector normalizes that internally
 
 ## Documentation
 
-- [Package README](./packages/turnkey-wagmi-connector/README.md)
+- [Detailed package usage](./docs/PACKAGE_USAGE.md)
+- [Workspace and demo apps](./docs/WORKSPACE.md)
 - [Testing the demo](./docs/TESTING_DEMO.md)
 - [Testing the Wagmi 3 demo](./docs/TESTING_DEMO_WAGMI3.md)
-- [Package usage](./docs/PACKAGE_USAGE.md)
 - [Publishing to npm](./docs/NPM_PUBLISHING.md)
+- [Contributing](./CONTRIBUTING.md)
 
 ## Notes
 
-- `/widget` and `/sandbox` are dynamic routes because they depend on client-side wallet providers.
-- `apps/web-wagmi3` keeps `/` intentionally Reown-free so Wagmi 3 connector compatibility can still be validated without external-wallet orchestration variables.
-- LI.FI currently pulls multichain wallet dependencies, including Sui packages, so the app pins `@mysten/sui@2.8.0` to keep the widget build stable.
+- This project is currently maintained by a solo developer.
+- A meaningful portion of the implementation and documentation was built with AI assistance.
+- This package has only been tested for EVM flows so far.
+- Further optimizations, refactors, or behavior changes may be possible, but they require review time to validate safely.
 
 ## License
 

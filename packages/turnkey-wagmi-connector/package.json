@@ -1,6 +1,6 @@
 {
   "name": "turnkey-wagmi-connector",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Turnkey Embedded Wallet Kit integration for Wagmi v2 and v3.",
   "keywords": [
     "turnkey",
