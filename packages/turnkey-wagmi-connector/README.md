@@ -1,6 +1,6 @@
 # turnkey-wagmi-connector
 
-Turnkey Embedded Wallet Kit integration for Wagmi v2.
+Turnkey Embedded Wallet Kit integration for Wagmi v2 and v3.
 
 This package makes a Turnkey embedded EVM wallet look like a normal Wagmi connector, keeps Wagmi connection state gated by the Turnkey session, and exposes a small set of direct Turnkey-backed wallet helpers for apps that need to bypass generic provider RPC flows.
 
@@ -36,17 +36,26 @@ That has a few important consequences:
 - `TurnkeyWagmiBridge` auto-connects the Turnkey connector after auth, refreshes the Turnkey session on `beforeSessionExpiry`, and disconnects all Wagmi connectors if the Turnkey session expires, becomes unauthenticated, or refresh fails.
 - If a user switches to an external wallet later, that wallet can become the active Wagmi connector, but it will still be dropped when the Turnkey session is no longer valid.
 
-## Requirements
+## Compatibility
+
+- `apps/web`: Wagmi 2 + Reown/AppKit acceptance fixture
+- `apps/web-wagmi3`: Wagmi 3 acceptance fixture with both pure and AppKit/LI.FI routes
+- supported `wagmi` range: `>=2.19.5 <4`
+- supported `@wagmi/core` range: `>=2.21.2 <4`
+- supported `viem` range: `2.x`
+- supported `react` range: `>=18`
+- consuming apps must install matching `wagmi` and `@wagmi/core` versions
+- Reown/AppKit support is app-level integration, not part of the package compatibility contract
 
 Peer dependencies expected by the consuming app:
 
 ```bash
-pnpm add wagmi viem react @tanstack/react-query @turnkey/react-wallet-kit
+pnpm add wagmi @wagmi/core viem react @tanstack/react-query @turnkey/react-wallet-kit
 ```
 
 The published package ships compiled JS and declaration files from `dist/`.
 
-If you consume the workspace package directly inside this monorepo, keep `transpilePackages: ["turnkey-wagmi-connector"]` in Next.js so local development continues to work against the source package.
+If you consume the workspace package directly inside this monorepo, keep `transpilePackages: ["turnkey-wagmi-connector"]` in Next.js and make sure the package has been built at least once so `dist/` exists.
 
 ## Hard Requirements For A Working Integration
 
@@ -524,7 +533,7 @@ This hook builds a direct Turnkey-backed Viem wallet client from:
 - the Turnkey HTTP client
 - the current Turnkey session organization ID
 - the resolved embedded account
-- the active Wagmi chain and its RPC URL
+- the active Wagmi chain and its configured transport
 
 It returns:
 
@@ -536,7 +545,7 @@ It returns:
 
 Use this when you want direct Turnkey-backed actions without going through generic wallet-provider RPC methods.
 
-If the active chain does not have a configured RPC URL, the hook throws.
+If the active chain does not have a configured Wagmi transport, the hook throws.
 
 ## Transaction Behavior
 
@@ -660,15 +669,12 @@ If you see hook/provider mismatch errors, make sure the app and workspace packag
 - first embedded EVM account only
 - no embedded account picker yet
 - EVM-focused flow only
-- source-exported package, not a publish-ready compiled dist
 
 ## Reference Integration In This Repo
 
-The demo app in this workspace is the current reference:
+This workspace ships two reference consumers:
 
-- `apps/web/src/lib/app-config.ts`
-- `apps/web/src/components/providers.tsx`
-- `apps/web/src/components/widget-demo.tsx`
-- `apps/web/src/components/sandbox-demo.tsx`
+- `apps/web` for the Wagmi 2 + Reown/AppKit fixture
+- `apps/web-wagmi3` for the Wagmi 3 fixture, including both pure and Reown/LI.FI routes
 
-If you need a known-good setup, start there and keep the same provider order and RPC wiring.
+If you need a known-good setup, start from the fixture that matches your Wagmi major and keep the same provider order and RPC wiring.

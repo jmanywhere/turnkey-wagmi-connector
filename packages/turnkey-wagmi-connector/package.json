@@ -1,7 +1,7 @@
 {
   "name": "turnkey-wagmi-connector",
   "version": "0.1.0",
-  "description": "Turnkey Embedded Wallet Kit integration for Wagmi v2.",
+  "description": "Turnkey Embedded Wallet Kit integration for Wagmi v2 and v3.",
   "keywords": [
     "turnkey",
     "wagmi",
@@ -42,29 +42,32 @@
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "prepare": "pnpm run build",
     "prepack": "pnpm run build"
   },
   "dependencies": {
     "@turnkey/core": "1.14.0",
     "@turnkey/eip-1193-provider": "3.4.27",
     "@turnkey/sdk-types": "0.13.0",
-    "@turnkey/viem": "0.14.27",
-    "@wagmi/core": "2.22.1"
+    "@turnkey/viem": "0.14.27"
   },
   "peerDependencies": {
-    "@tanstack/react-query": "^5.95.2",
+    "@tanstack/react-query": ">=5.0.0",
     "@turnkey/react-wallet-kit": "^1.11.0",
-    "react": "^19.2.4",
-    "viem": "^2.47.6",
-    "wagmi": "^2.19.5"
+    "@wagmi/core": ">=2.21.2 <4",
+    "react": ">=18",
+    "viem": "2.x",
+    "wagmi": ">=2.19.5 <4"
   },
   "devDependencies": {
     "@tanstack/react-query": "5.95.2",
     "@types/react": "^19.2.14",
     "@turnkey/react-wallet-kit": "1.11.0",
+    "@wagmi/core": "3.4.1",
     "react": "19.2.4",
+    "react-dom": "19.2.4",
     "viem": "2.47.6",
     "vitest": "^4.1.2",
-    "wagmi": "2.19.5"
+    "wagmi": "3.6.0"
   }
 }

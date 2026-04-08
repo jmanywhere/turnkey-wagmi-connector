@@ -28,14 +28,25 @@ Current public exports:
 - `TurnkeySessionProvider`
 - `TurnkeyWagmiBridge`
 - `useTurnkeySessionGate`
+- `useTurnkeyChainSwitch`
 - `useTurnkeyWalletActions`
+
+## Compatibility
+
+- `apps/web`: Wagmi 2 + Reown/AppKit acceptance fixture
+- `apps/web-wagmi3`: pure Wagmi 3 acceptance fixture
+- supported `wagmi` range: `>=2.19.5 <4`
+- supported `@wagmi/core` range: `>=2.21.2 <4`
+- supported `viem` range: `2.x`
+- supported `react` range: `>=18`
+- apps must install matching `wagmi` and `@wagmi/core` versions
 
 ## Install
 
 The package currently expects these peers in the consuming app:
 
 ```bash
-pnpm add wagmi viem react @tanstack/react-query @turnkey/react-wallet-kit
+pnpm add wagmi @wagmi/core viem react @tanstack/react-query @turnkey/react-wallet-kit
 ```
 
 The reusable package itself depends on:
@@ -44,7 +55,7 @@ The reusable package itself depends on:
 - `@turnkey/eip-1193-provider`
 - `@turnkey/sdk-types`
 - `@turnkey/viem`
-- `@wagmi/core`
+- `@wagmi/core` as an app-installed peer
 
 ## Typical Integration Shape
 
@@ -55,6 +66,59 @@ You usually want:
 3. a normal Wagmi config that includes that connector
 4. `TurnkeySessionProvider` wrapped around your app
 5. `TurnkeyWagmiBridge` inside the provider tree
+
+## Required Data
+
+These are the data categories the package needs in order to work reliably in both
+Wagmi 2 and Wagmi 3 apps:
+
+- compatibility data
+  - target `wagmi` version
+  - target `@wagmi/core` version
+  - target `viem` version
+  - target `react` version
+- Turnkey session data
+  - `authState`
+  - `session`
+  - `session.organizationId`
+  - `session.expiry`
+  - `httpClient`
+  - `wallets`
+- resolved embedded account data
+  - `address`
+  - `walletId`
+  - `walletAccountId`
+  - wallet and account metadata
+- configured chain data
+  - `id`
+  - `name`
+  - `nativeCurrency`
+  - `rpcUrls`
+  - block explorer URLs when available
+  - optional `wallet_addEthereumChain` payload data
+- transaction request data
+  - `chainId`
+  - `from`
+  - `to`
+  - `data`
+  - `value`
+  - `gas` or `gasLimit`
+  - `gasPrice`
+  - `maxFeePerGas`
+  - `maxPriorityFeePerGas`
+  - `maxFeePerBlobGas`
+  - `nonce`
+  - `type`
+  - `accessList`
+  - `authorizationList`
+  - blob-related fields
+- demo env data
+  - `NEXT_PUBLIC_TURNKEY_ORGANIZATION_ID`
+  - `NEXT_PUBLIC_TURNKEY_AUTH_PROXY_CONFIG_ID`
+  - `NEXT_PUBLIC_TURNKEY_API_BASE_URL`
+  - per-chain RPC URLs for every configured chain
+- Reown-only demo data
+  - `NEXT_PUBLIC_REOWN_PROJECT_ID` only for the `apps/web` fixture
 
 ## Example
 

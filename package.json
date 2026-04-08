@@ -3,8 +3,9 @@
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "pnpm --filter web dev",
-    "build": "pnpm -r build",
+    "dev": "pnpm --filter turnkey-wagmi-connector build && pnpm --filter web dev",
+    "dev:wagmi3": "pnpm --filter turnkey-wagmi-connector build && pnpm --filter web-wagmi3 dev",
+    "build": "pnpm -r --workspace-concurrency=1 build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test"

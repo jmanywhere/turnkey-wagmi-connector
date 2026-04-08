@@ -17,7 +17,10 @@ import {
     useConnections,
     useSignMessage,
 } from "wagmi";
-import { useTurnkeyChainSwitch, useTurnkeySessionGate } from "turnkey-wagmi-connector";
+import {
+    useTurnkeyChainSwitch,
+    useTurnkeySessionGate,
+} from "turnkey-wagmi-connector";
 import { wagmiConfig } from "@/lib/app-config";
 import { isReownConfigured, isTurnkeyConfigured } from "@/lib/env";
 
@@ -350,9 +353,6 @@ export function WidgetDemo() {
                             config={{
                                 appearance: "light",
                                 variant: "wide",
-                                subvariant: "split",
-                                fromChain: 8453,
-                                toChain: 10,
                                 theme: {
                                     palette: {
                                         primary: { main: "#19140f" },

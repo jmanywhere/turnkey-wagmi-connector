@@ -1,8 +1,6 @@
-# Testing The Wagmi 2 Demo
+# Testing The Wagmi 3 Demo
 
-This document explains how to verify the Wagmi 2 + Reown/AppKit demo app in `apps/web`.
-
-For the pure Wagmi 3 fixture, use [`docs/TESTING_DEMO_WAGMI3.md`](./TESTING_DEMO_WAGMI3.md).
+This document explains how to verify the Wagmi 3 fixture in `apps/web-wagmi3`.
 
 ## What You Need
 
@@ -10,19 +8,24 @@ Before testing, make sure you have:
 
 - a Turnkey parent organization
 - a Turnkey auth proxy config that supports email OTP
-- a Reown project ID
-- RPC URLs for the configured chains, or let the app fall back to the default viem chain RPCs
+- a Reown project ID if you want to test the `/widget` comparison route
+- RPC URLs for the configured chains
 - Base Sepolia test funds if you want to test transaction sending
 
 ## Environment Setup
 
-Create `apps/web/.env.local` from `apps/web/.env.example`.
+Create `apps/web-wagmi3/.env.local` from `apps/web-wagmi3/.env.example`.
 
 Required values:
 
 ```bash
 NEXT_PUBLIC_TURNKEY_ORGANIZATION_ID=
 NEXT_PUBLIC_TURNKEY_AUTH_PROXY_CONFIG_ID=
+```
+
+Required for `/widget`:
+
+```bash
 NEXT_PUBLIC_REOWN_PROJECT_ID=
 ```
 
@@ -32,9 +35,6 @@ Optional but recommended:
 NEXT_PUBLIC_TURNKEY_API_BASE_URL=https://api.turnkey.com
 NEXT_PUBLIC_MAINNET_RPC_URL=
 NEXT_PUBLIC_BASE_RPC_URL=
-NEXT_PUBLIC_ARBITRUM_RPC_URL=
-NEXT_PUBLIC_OPTIMISM_RPC_URL=
-NEXT_PUBLIC_POLYGON_RPC_URL=
 NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL=
 ```
 
@@ -44,17 +44,84 @@ From the repo root:
 
 ```bash
 pnpm install
-pnpm dev
+pnpm dev:wagmi3
 ```
 
 Open:
 
+- `http://localhost:3000`
 - `http://localhost:3000/widget`
-- `http://localhost:3000/sandbox`
+
+## Acceptance Checklist: `/`
+
+### 1. Turnkey session login
+
+1. Open `/`.
+2. Click `Connect Turnkey session`.
+3. Complete email OTP login in the Turnkey modal.
+
+Expected result:
+
+- Turnkey auth state becomes `authenticated`
+- the embedded EVM wallet auto-connects through the custom Wagmi connector
+- the active connector becomes `Turnkey Session`
+- the selected address and balance populate in the UI
+
+### 2. Wagmi path works
+
+After Turnkey auth succeeds:
+
+1. Click `Sign via Wagmi`.
+
+Expected result:
+
+- the message is signed through the active Wagmi connector
+- a signature appears in the Wagmi section
+
+### 3. Chain switching works
+
+1. Click the chain-switch buttons for `Base`, `Base Sepolia`, and `Mainnet`.
+
+Expected result:
+
+- the current chain id updates
+- the active Wagmi connector remains connected when the session is valid
+
+### 4. Direct Turnkey actions work
+
+1. Click `Direct sign message`.
+2. Click `Direct sign typed data`.
+
+Expected result:
+
+- both signatures are returned through `@turnkey/viem`
+- each signature appears in the UI
+
+### 5. Direct transaction path works
+
+1. Switch to `Base Sepolia`.
+2. Enter a valid recipient address or leave the field empty to default to the active address.
+3. Enter a small ETH value like `0.00001`.
+4. Click `Send direct transaction`.
+
+Expected result:
+
+- a transaction hash is returned
+- the hash can be checked on a Base Sepolia explorer
+
+### 6. Disconnect path works
+
+1. Click `Disconnect all`.
+
+Expected result:
+
+- Turnkey logs out
+- the Wagmi account becomes disconnected
+- the connector is no longer shown as active
 
 ## Acceptance Checklist: `/widget`
 
-This route proves the LI.FI + Wagmi + Reown integration behavior.
+This route proves the Wagmi 3 + LI.FI + Reown integration behavior.
 
 ### 1. Turnkey session login
 
@@ -124,56 +191,18 @@ Expected result:
 - the bridge disconnects active Wagmi connectors
 - LI.FI should no longer treat the wallet as connected
 
-## Acceptance Checklist: `/sandbox`
-
-This route verifies direct Turnkey-backed viem actions.
-
-### 1. Sign a message directly
-
-1. Make sure you are authenticated with Turnkey.
-2. Open `/sandbox`.
-3. Click `Sign message`.
-
-Expected result:
-
-- a signature is returned using Turnkey-backed signing
-- the output appears in the response box
-
-### 2. Sign typed data directly
-
-Click `Sign typed data`.
-
-Expected result:
-
-- typed data is signed through Turnkey
-- the signature appears in the UI
-
-### 3. Send a Base Sepolia transaction
-
-1. Enter a valid Base Sepolia recipient address
-2. Enter a small ETH amount like `0.00001`
-3. Click `Send direct transaction`
-
-Expected result:
-
-- a transaction hash is returned
-- the hash can be checked on a Base Sepolia explorer
-
 ## Useful Verification Commands
 
 Run from the repo root:
 
 ```bash
-pnpm typecheck
-pnpm build
+pnpm --filter turnkey-wagmi-connector test
+pnpm --filter web-wagmi3 typecheck
+pnpm --filter web-wagmi3 build
 ```
 
 Expected result:
 
-- typecheck passes for both workspace packages
-- production build succeeds
-
-## Current Caveats
-
-- `/widget` and `/sandbox` are marked dynamic because they depend on client-side wallet providers.
-- LI.FI currently pulls multichain dependencies, so the app pins `@mysten/sui@2.8.0` to keep the widget build stable.
+- package tests pass
+- the Wagmi 3 app typechecks
+- the Wagmi 3 app production build succeeds
