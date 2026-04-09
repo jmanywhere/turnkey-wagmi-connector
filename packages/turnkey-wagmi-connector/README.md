@@ -10,7 +10,7 @@ The package version is defined in `package.json`.
 
 Current repo version:
 
-- `turnkey-wagmi-connector@0.1.0`
+- `turnkey-wagmi-connector@0.0.1`
 
 ## Install
 
@@ -46,91 +46,92 @@ import { createConfig, http, WagmiProvider } from "wagmi";
 import { base, mainnet } from "viem/chains";
 import type { TurnkeyProviderConfig } from "@turnkey/react-wallet-kit";
 import {
-  TurnkeySessionProvider,
-  TurnkeyWagmiBridge,
-  createTurnkeyConnector,
+    TurnkeySessionProvider,
+    TurnkeyWagmiBridge,
+    createTurnkeyConnector,
 } from "turnkey-wagmi-connector";
 
 const chains = [mainnet, base] as const;
 
 function withRpcOverride<TChain extends (typeof chains)[number]>(
-  chain: TChain,
-  rpcUrl: string,
+    chain: TChain,
+    rpcUrl: string,
 ) {
-  return {
-    ...chain,
-    rpcUrls: {
-      ...chain.rpcUrls,
-      default: {
-        ...chain.rpcUrls.default,
-        http: [rpcUrl || chain.rpcUrls.default.http[0] || ""],
-      },
-      public: chain.rpcUrls.public
-        ? {
-            ...chain.rpcUrls.public,
-            http: [rpcUrl || chain.rpcUrls.public.http[0] || ""],
-          }
-        : undefined,
-    },
-  };
+    return {
+        ...chain,
+        rpcUrls: {
+            ...chain.rpcUrls,
+            default: {
+                ...chain.rpcUrls.default,
+                http: [rpcUrl || chain.rpcUrls.default.http[0] || ""],
+            },
+            public: chain.rpcUrls.public
+                ? {
+                      ...chain.rpcUrls.public,
+                      http: [rpcUrl || chain.rpcUrls.public.http[0] || ""],
+                  }
+                : undefined,
+        },
+    };
 }
 
 const appChains = [
-  withRpcOverride(mainnet, process.env.NEXT_PUBLIC_MAINNET_RPC_URL || ""),
-  withRpcOverride(base, process.env.NEXT_PUBLIC_BASE_RPC_URL || ""),
+    withRpcOverride(mainnet, process.env.NEXT_PUBLIC_MAINNET_RPC_URL || ""),
+    withRpcOverride(base, process.env.NEXT_PUBLIC_BASE_RPC_URL || ""),
 ] as const;
 
 const turnkeyConnector = createTurnkeyConnector({
-  chains: appChains,
-  walletLabel: "Turnkey Session",
+    chains: appChains,
+    walletLabel: "Turnkey Session",
 });
 
 const wagmiConfig = createConfig({
-  chains: appChains,
-  connectors: [turnkeyConnector],
-  transports: {
-    [mainnet.id]: http(appChains[0].rpcUrls.default.http[0]),
-    [base.id]: http(appChains[1].rpcUrls.default.http[0]),
-  },
-  ssr: true,
+    chains: appChains,
+    connectors: [turnkeyConnector],
+    transports: {
+        [mainnet.id]: http(appChains[0].rpcUrls.default.http[0]),
+        [base.id]: http(appChains[1].rpcUrls.default.http[0]),
+    },
+    ssr: true,
 });
 
 const turnkeyConfig: TurnkeyProviderConfig = {
-  apiBaseUrl:
-    process.env.NEXT_PUBLIC_TURNKEY_API_BASE_URL || "https://api.turnkey.com",
-  organizationId: process.env.NEXT_PUBLIC_TURNKEY_ORGANIZATION_ID || "",
-  authProxyConfigId:
-    process.env.NEXT_PUBLIC_TURNKEY_AUTH_PROXY_CONFIG_ID || undefined,
-  auth: {
-    autoRefreshSession: false,
-    methods: {
-      emailOtpAuthEnabled: true,
-      smsOtpAuthEnabled: false,
-      passkeyAuthEnabled: false,
-      walletAuthEnabled: false,
-      googleOauthEnabled: false,
-      appleOauthEnabled: false,
-      xOauthEnabled: false,
-      discordOauthEnabled: false,
-      facebookOauthEnabled: false,
+    apiBaseUrl:
+        process.env.NEXT_PUBLIC_TURNKEY_API_BASE_URL ||
+        "https://api.turnkey.com",
+    organizationId: process.env.NEXT_PUBLIC_TURNKEY_ORGANIZATION_ID || "",
+    authProxyConfigId:
+        process.env.NEXT_PUBLIC_TURNKEY_AUTH_PROXY_CONFIG_ID || undefined,
+    auth: {
+        autoRefreshSession: false,
+        methods: {
+            emailOtpAuthEnabled: true,
+            smsOtpAuthEnabled: false,
+            passkeyAuthEnabled: false,
+            walletAuthEnabled: false,
+            googleOauthEnabled: false,
+            appleOauthEnabled: false,
+            xOauthEnabled: false,
+            discordOauthEnabled: false,
+            facebookOauthEnabled: false,
+        },
+        methodOrder: ["email"],
     },
-    methodOrder: ["email"],
-  },
 };
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+    const [queryClient] = useState(() => new QueryClient());
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TurnkeySessionProvider turnkeyConfig={turnkeyConfig}>
-        <WagmiProvider config={wagmiConfig}>
-          <TurnkeyWagmiBridge />
-          {children}
-        </WagmiProvider>
-      </TurnkeySessionProvider>
-    </QueryClientProvider>
-  );
+    return (
+        <QueryClientProvider client={queryClient}>
+            <TurnkeySessionProvider turnkeyConfig={turnkeyConfig}>
+                <WagmiProvider config={wagmiConfig}>
+                    <TurnkeyWagmiBridge />
+                    {children}
+                </WagmiProvider>
+            </TurnkeySessionProvider>
+        </QueryClientProvider>
+    );
 }
 ```
 

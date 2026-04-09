@@ -11,7 +11,7 @@
     "reown",
     "appkit"
   ],
-  "homepage": "https://github.com/jmanywhere/turnkey-wagmi-connector#readme",
+  "homepage": "https://turnkey-wagmi-connector-web.vercel.app/",
   "bugs": {
     "url": "https://github.com/jmanywhere/turnkey-wagmi-connector/issues"
   },

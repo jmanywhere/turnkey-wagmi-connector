@@ -21,26 +21,23 @@ Recommended shape:
 
 ```json
 {
-  "name": "turnkey-wagmi-connector",
-  "version": "0.1.0",
-  "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+    "name": "turnkey-wagmi-connector",
+    "version": "0.0.1",
+    "type": "module",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
+        }
+    },
+    "files": ["dist", "README.md"],
+    "scripts": {
+        "prepack": "pnpm run build"
     }
-  },
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "scripts": {
-    "prepack": "pnpm run build"
-  }
 }
 ```
 
@@ -55,16 +52,16 @@ For example, create a dedicated package tsconfig such as:
 
 ```json
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "./src",
-    "outDir": "./dist",
-    "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": false,
-    "noEmit": false
-  },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "rootDir": "./src",
+        "outDir": "./dist",
+        "declaration": true,
+        "declarationMap": true,
+        "emitDeclarationOnly": false,
+        "noEmit": false
+    },
+    "include": ["src/**/*.ts", "src/**/*.tsx"]
 }
 ```
 
