@@ -50,6 +50,12 @@ The package currently expects these peers in the consuming app:
 pnpm add wagmi @wagmi/core viem react @tanstack/react-query @turnkey/react-wallet-kit
 ```
 
+If your app uses TypeScript, also install the compiler and React types in the app itself:
+
+```bash
+pnpm add -D typescript @types/react
+```
+
 The reusable package itself depends on:
 
 - `@turnkey/core`

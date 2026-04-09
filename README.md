@@ -47,6 +47,12 @@ Expected peer dependencies in the consuming app:
 pnpm add turnkey-wagmi-connector wagmi @wagmi/core viem react @tanstack/react-query @turnkey/react-wallet-kit
 ```
 
+If the consuming app uses TypeScript, it should also have its own compiler and React type packages installed:
+
+```bash
+pnpm add -D typescript @types/react
+```
+
 ## Integration Rules
 
 These are the requirements that matter in practice:

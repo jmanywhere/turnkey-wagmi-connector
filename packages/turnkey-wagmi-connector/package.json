@@ -59,6 +59,26 @@
     "viem": "2.x",
     "wagmi": ">=2.19.5 <4"
   },
+  "peerDependenciesMeta": {
+    "@tanstack/react-query": {
+      "optional": false
+    },
+    "@turnkey/react-wallet-kit": {
+      "optional": false
+    },
+    "@wagmi/core": {
+      "optional": false
+    },
+    "react": {
+      "optional": false
+    },
+    "viem": {
+      "optional": false
+    },
+    "wagmi": {
+      "optional": false
+    }
+  },
   "devDependencies": {
     "@tanstack/react-query": "5.95.2",
     "@types/react": "^19.2.14",
@@ -66,6 +86,7 @@
     "@wagmi/core": "3.4.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "typescript": "^5.9.3",
     "viem": "2.47.6",
     "vitest": "^4.1.2",
     "wagmi": "3.6.0"
