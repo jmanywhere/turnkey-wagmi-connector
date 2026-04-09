@@ -188,6 +188,12 @@ code {
   color: #7f3517;
 }
 
+.session-banner--ok {
+  background: rgba(46, 125, 50, 0.12);
+  border-color: rgba(46, 125, 50, 0.28);
+  color: #1b4d1e;
+}
+
 .field {
   display: grid;
   gap: 0.45rem;

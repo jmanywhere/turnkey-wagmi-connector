@@ -10,9 +10,10 @@ export default function Home() {
           real external wallets.
         </h1>
         <p className="hero-copy">
-          This demo keeps Turnkey Embedded Wallet Kit as the session source of
-          truth, auto-connects the embedded EVM wallet into Wagmi, and forces
-          every connector to drop when the Turnkey session expires.
+          This demo keeps Turnkey Embedded Wallet Kit available for embedded
+          flows, auto-connects the embedded EVM wallet into Wagmi after auth,
+          and still allows any connected third-party wallet to remain the
+          active Wagmi wallet when no Turnkey session is present.
         </p>
         <div className="hero-actions">
           <Link href="/widget" className="primary-link">
@@ -31,7 +32,7 @@ export default function Home() {
           <p>
             Verifies that the Turnkey-backed connector shows up as connected in
             the surrounding Wagmi provider and that Reown AppKit can take over
-            with an external wallet without dropping the Turnkey session.
+            with an external wallet even if Turnkey is currently signed out.
           </p>
         </article>
 

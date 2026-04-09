@@ -22,14 +22,18 @@ This lets you:
 
 ## Exports
 
-Current public exports:
+**Runtime:** the package is **React-only**. It ships providers and hooks for client React trees. Do not expect it to run in Node scripts, service workers, or non-React bundles without a React host.
 
-- `createTurnkeyConnector`
-- `TurnkeySessionProvider`
-- `TurnkeyWagmiBridge`
-- `useTurnkeySessionGate`
-- `useTurnkeyChainSwitch`
-- `useTurnkeyWalletActions`
+Current public exports and typical usage:
+
+- **`createTurnkeyConnector`** — Factory for a Wagmi `Connector` backed by Turnkey’s embedded EVM account; pass the result in your Wagmi `connectors` list (see fixtures’ `app-config` / provider setup).
+- **`TurnkeySessionProvider`** — Wraps `@turnkey/react-wallet-kit` and mirrors Turnkey auth/session into the connector runtime; must wrap any usage of the bridge or connector.
+- **`TurnkeyWagmiBridge`** — Mount once inside `WagmiProvider`: auto-connects the Turnkey connector after auth, refreshes session before expiry, and disconnects Wagmi when Turnkey session ends.
+- **`useTurnkeySessionGate`** — Hook for session-aware UI: auth state, reconnect hints, `connectTurnkey` / `refreshSession` / `disconnectAll`, embedded account metadata.
+- **`useTurnkeyChainSwitch`** — Hook for chain changes that stay aligned with Turnkey + Wagmi (when the app manages network switching outside AppKit).
+- **`useTurnkeyWalletActions`** — Direct `@turnkey/viem` helpers (`signMessage`, `signTypedData`, `sendTransaction`) bypassing generic provider wiring when you need them.
+
+Environment variables such as `NEXT_PUBLIC_TURNKEY_*` or `NEXT_PUBLIC_REOWN_*` appear in **demo apps** (`apps/web`, `apps/web-npm`, `apps/web-wagmi3`) only as a way to feed Wagmi, Reown, and Turnkey config. **The npm package does not read `process.env`.** You supply `TurnkeyProviderConfig`, Wagmi config, and AppKit options from whatever source your app uses. For the npm fixture’s env mapping, see `apps/web-npm/README.md`.
 
 ## Compatibility
 
@@ -125,7 +129,7 @@ Wagmi 2 and Wagmi 3 apps:
   - `NEXT_PUBLIC_TURNKEY_API_BASE_URL`
   - per-chain RPC URLs for every configured chain
 - Reown-only demo data
-  - `NEXT_PUBLIC_REOWN_PROJECT_ID` only for the `apps/web` fixture
+  - `NEXT_PUBLIC_REOWN_PROJECT_ID` for `apps/web` and `apps/web-npm` when using Reown/AppKit (and for `apps/web-wagmi3` `/widget`)
 
 ## Example
 
@@ -349,6 +353,7 @@ If you use the package inside a Next monorepo workspace, pay attention to:
 
 ## Current Limitations
 
+- React-only; no first-class support for non-React consumers
 - first embedded EVM account only
 - no account selector
 - no Solana support

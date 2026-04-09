@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
-import { Providers } from "@/components/providers";
 import "@turnkey/react-wallet-kit/styles.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Providers } from "@/components/providers";
 
-const display = Space_Grotesk({
+const display = Instrument_Sans({
   variable: "--font-display",
   subsets: ["latin"],
 });
@@ -16,9 +17,9 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Turnkey Wagmi Connector NPM Demo",
+  title: "turnkey-wagmi-connector — Integration Guide",
   description:
-    "Demo app that installs turnkey-wagmi-connector from npm with Wagmi and Reown AppKit.",
+    "Follow along to integrate the published turnkey-wagmi-connector package into any TypeScript / React frontend. Includes live demos with LI.FI and direct Turnkey signing.",
 };
 
 export default function RootLayout({
@@ -29,10 +30,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${display.variable} ${mono.variable} h-full antialiased`}
+      className={`${display.variable} ${mono.variable}`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full">
-        <Providers>{children}</Providers>
+      <body className="min-h-dvh antialiased">
+        <ThemeProvider>
+          <Providers>{children}</Providers>
+        </ThemeProvider>
       </body>
     </html>
   );

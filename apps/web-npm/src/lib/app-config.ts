@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Demo integration layer: maps `publicEnv` into Wagmi, Reown AppKit, and Turnkey
+ * Embedded Wallet Kit. Not part of `turnkey-wagmi-connector`; safe to replace in
+ * your app with your own config builders.
+ */
 import type { TurnkeyProviderConfig } from "@turnkey/react-wallet-kit";
 import { AppKitProvider, type AppKitProviderProps } from "@reown/appkit/react";
 import {
@@ -16,6 +21,7 @@ import { http } from "wagmi";
 import { createTurnkeyConnector } from "turnkey-wagmi-connector";
 import { publicEnv } from "./env";
 
+/** Chains registered on both the Turnkey connector and AppKit. */
 export const appChains = [
   mainnet,
   base,
@@ -59,11 +65,13 @@ const appNetworks = appChains.map((chain) => {
   };
 }) as unknown as [AppKitNetwork, ...AppKitNetwork[]];
 
+/** Single Turnkey-backed Wagmi connector for this fixture. */
 export const turnkeyConnector = createTurnkeyConnector({
   chains: appChains,
   walletLabel: "Turnkey Session",
 });
 
+/** Reown adapter: bundles networks, transports, and `turnkeyConnector`. */
 export const wagmiAdapter = new WagmiAdapter({
   projectId: publicEnv.reownProjectId || "demo-project-id",
   networks: appNetworks,
@@ -77,8 +85,10 @@ export const wagmiAdapter = new WagmiAdapter({
   ssr: true,
 });
 
+/** Wagmi config consumed by `WagmiProvider` in `providers.tsx`. */
 export const wagmiConfig = wagmiAdapter.wagmiConfig;
 
+/** Props (except `children`) for root `AppKitProvider`. */
 export const appKitConfig: Omit<AppKitProviderProps, "children"> = {
   projectId: publicEnv.reownProjectId || "demo-project-id",
   adapters: [wagmiAdapter],
@@ -91,11 +101,12 @@ export const appKitConfig: Omit<AppKitProviderProps, "children"> = {
     url: "https://github.com/jmanywhere/turnkey-wagmi-connector",
     icons: ["https://avatars.githubusercontent.com/u/14957082"],
   },
-  themeMode: "light",
+  themeMode: undefined,
   showWallets: true,
   allowUnsupportedChain: true,
 };
 
+/** Turnkey Embedded Wallet Kit provider options; merged with theme in `providers.tsx`. */
 export const turnkeyProviderConfig: TurnkeyProviderConfig = {
   apiBaseUrl: publicEnv.turnkeyApiBaseUrl,
   organizationId: publicEnv.turnkeyOrganizationId || "demo-org-id",
@@ -125,4 +136,5 @@ export const turnkeyProviderConfig: TurnkeyProviderConfig = {
   },
 };
 
+/** Re-export so `providers.tsx` can import App Kit from one module. */
 export { AppKitProvider };

@@ -26,6 +26,7 @@ packages/turnkey-wagmi-connector
 
 `apps/web-npm` contains:
 
+- a **React / Next.js** demo only (not a reusable non-React package); see `apps/web-npm/README.md` for env vs connector scope
 - `/widget` for the same Wagmi 2 + Reown + LI.FI flow while consuming the published npm package
 - `/sandbox` for direct Turnkey signing and transaction helpers on Base Sepolia through the npm package build
 
@@ -58,6 +59,8 @@ packages/turnkey-wagmi-connector
 - `@reown/appkit-adapter-wagmi@1.8.19`
 
 ## Environment
+
+Those variables configure **each demo app’s** Wagmi, Reown, and Turnkey clients. They are not read by `turnkey-wagmi-connector` itself; the package receives config objects from your code. The npm consumer maps them in `apps/web-npm/src/lib/env.ts` and `apps/web-npm/src/lib/app-config.ts` — see `apps/web-npm/README.md` for a concise table.
 
 Copy `apps/web/.env.example`, `apps/web-npm/.env.example`, or `apps/web-wagmi3/.env.example` and provide:
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AppKitAccountButton,
@@ -17,7 +17,7 @@ import {
   useConnections,
   useSignMessage,
 } from "wagmi";
-import { formatUnits } from "viem";
+import { formatUnits, verifyMessage } from "viem";
 import {
   useTurnkeyChainSwitch,
   useTurnkeySessionGate,
@@ -42,7 +42,10 @@ export function Wagmi3WidgetDemo() {
     },
   });
   const { signMessageAsync } = useSignMessage();
+  const [signedMessage, setSignedMessage] = useState("");
   const [signature, setSignature] = useState("");
+  const [verificationOk, setVerificationOk] = useState<boolean | null>(null);
+  const [verifyDetail, setVerifyDetail] = useState("");
   const [error, setError] = useState("");
 
   const connectedAddress =
@@ -52,6 +55,19 @@ export function Wagmi3WidgetDemo() {
   const lifiWidgetKey = `${connectedAddress ?? "disconnected"}:${String(
     sessionGate.isSessionValid,
   )}`;
+
+  const preSignAddressRef = useRef<typeof account.address>(undefined);
+  useEffect(() => {
+    if (preSignAddressRef.current === account.address) {
+      return;
+    }
+    preSignAddressRef.current = account.address;
+    setSignedMessage("");
+    setSignature("");
+    setVerificationOk(null);
+    setVerifyDetail("");
+  }, [account.address]);
+
   const sessionExpiryLabel = sessionGate.sessionExpiresAt
     ? new Date(sessionGate.sessionExpiresAt).toLocaleString()
     : "n/a";
@@ -95,6 +111,31 @@ export function Wagmi3WidgetDemo() {
 
     return items;
   }, []);
+
+  const verifyLocalSignature = async (
+    message: string,
+    sig: `0x${string}`,
+    address: `0x${string}`,
+  ) => {
+    try {
+      const ok = await verifyMessage({
+        address,
+        message,
+        signature: sig,
+      });
+      setVerificationOk(ok);
+      setVerifyDetail(
+        ok
+          ? "EIP-191 personal_sign: recovered signer matches the connected address (viem verifyMessage)."
+          : "Recovered signer does not match the connected address.",
+      );
+    } catch (cause) {
+      setVerificationOk(false);
+      setVerifyDetail(
+        cause instanceof Error ? cause.message : "Verification failed.",
+      );
+    }
+  };
 
   return (
     <div className="route-layout stack">
@@ -293,15 +334,27 @@ export function Wagmi3WidgetDemo() {
             <div className="button-row">
               <button
                 className="action-button primary"
-                disabled={!account.isConnected}
+                disabled={!account.isConnected || !account.address}
                 onClick={async () => {
+                  if (!account.address) {
+                    return;
+                  }
                   try {
                     setError("");
-                    const result = await signMessageAsync({
-                      message: `Turnkey widget demo :: ${new Date().toISOString()}`,
-                    });
+                    const message = `Turnkey widget demo :: ${new Date().toISOString()}`;
+                    const result = await signMessageAsync({ message });
+                    setSignedMessage(message);
                     setSignature(result);
+                    await verifyLocalSignature(
+                      message,
+                      result as `0x${string}`,
+                      account.address,
+                    );
                   } catch (cause) {
+                    setSignedMessage("");
+                    setSignature("");
+                    setVerificationOk(null);
+                    setVerifyDetail("");
                     setError(
                       cause instanceof Error ? cause.message : "Signing failed.",
                     );
@@ -311,8 +364,56 @@ export function Wagmi3WidgetDemo() {
               >
                 Sign via Wagmi
               </button>
+              <button
+                className="action-button secondary"
+                disabled={!signedMessage || !signature || !account.address}
+                onClick={() => {
+                  if (!account.address || !signedMessage || !signature) {
+                    return;
+                  }
+                  void verifyLocalSignature(
+                    signedMessage,
+                    signature as `0x${string}`,
+                    account.address,
+                  );
+                }}
+                type="button"
+              >
+                Re-verify locally
+              </button>
+              <a
+                className="action-button secondary"
+                href="https://etherscan.io/verifiedSignatures#"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Verify on Etherscan
+              </a>
             </div>
-            {signature ? <pre className="mono-box">{signature}</pre> : null}
+            {signedMessage ? (
+              <div className="stack">
+                <h3 className="eyebrow">Signed message</h3>
+                <pre className="mono-box">{signedMessage}</pre>
+              </div>
+            ) : null}
+            {signature ? (
+              <div className="stack">
+                <h3 className="eyebrow">Signature</h3>
+                <pre className="mono-box">{signature}</pre>
+              </div>
+            ) : null}
+            {verificationOk !== null ? (
+              <div
+                className={
+                  verificationOk ? "session-banner session-banner--ok" : "session-banner"
+                }
+              >
+                {verificationOk
+                  ? "Signature is valid for this address."
+                  : "Signature verification failed."}{" "}
+                {verifyDetail}
+              </div>
+            ) : null}
             {error ? <div className="session-banner">{error}</div> : null}
           </div>
         </article>

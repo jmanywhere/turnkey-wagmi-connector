@@ -1,3 +1,10 @@
+/**
+ * Next.js public env surface for this demo app only.
+ *
+ * Values feed the Wagmi + Reown + Turnkey stack in `app-config.ts`. The
+ * `turnkey-wagmi-connector` package does not read these variables; your app
+ * must pass equivalent config into providers and connectors explicitly.
+ */
 export const publicEnv = {
   turnkeyOrganizationId: process.env.NEXT_PUBLIC_TURNKEY_ORGANIZATION_ID ?? "",
   turnkeyAuthProxyConfigId: process.env.NEXT_PUBLIC_TURNKEY_AUTH_PROXY_CONFIG_ID ?? "",
@@ -12,8 +19,10 @@ export const publicEnv = {
   baseSepoliaRpcUrl: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL ?? "",
 };
 
+/** True when org + auth proxy IDs are set; used for onboarding banners in the UI. */
 export const isTurnkeyConfigured = Boolean(
   publicEnv.turnkeyOrganizationId && publicEnv.turnkeyAuthProxyConfigId,
 );
 
+/** True when Reown Cloud project ID is set; external wallet UI needs it. */
 export const isReownConfigured = Boolean(publicEnv.reownProjectId);
