@@ -4,6 +4,7 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "pnpm --filter turnkey-wagmi-connector build && pnpm --filter web dev",
+    "dev:npm": "pnpm --filter web-npm dev",
     "dev:wagmi3": "pnpm --filter turnkey-wagmi-connector build && pnpm --filter web-wagmi3 dev",
     "build": "pnpm -r --workspace-concurrency=1 build",
     "lint": "pnpm -r lint",

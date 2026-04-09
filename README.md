@@ -10,7 +10,7 @@ The source of truth for package versioning is [`packages/turnkey-wagmi-connector
 
 Current repo version:
 
-- `turnkey-wagmi-connector@0.1.0`
+- `turnkey-wagmi-connector@0.0.1`
 
 When you cut a release, bump the version there first. The root README should reflect that published version.
 

@@ -6,6 +6,7 @@ This repository is a monorepo for the `turnkey-wagmi-connector` package and its 
 
 ```text
 apps/web
+apps/web-npm
 apps/web-wagmi3
 packages/turnkey-wagmi-connector
 ```
@@ -23,6 +24,11 @@ packages/turnkey-wagmi-connector
 - `/widget` for LI.FI + Reown + Turnkey session orchestration
 - `/sandbox` for direct Turnkey signing and transaction helpers on Base Sepolia
 
+`apps/web-npm` contains:
+
+- `/widget` for the same Wagmi 2 + Reown + LI.FI flow while consuming the published npm package
+- `/sandbox` for direct Turnkey signing and transaction helpers on Base Sepolia through the npm package build
+
 `apps/web-wagmi3` contains:
 
 - `/` for a pure Wagmi 3 + Turnkey validation flow without Reown/AppKit
@@ -32,13 +38,15 @@ packages/turnkey-wagmi-connector
 
 - `packages/turnkey-wagmi-connector` supports `wagmi >=2.19.5 <4` and `@wagmi/core >=2.21.2 <4`
 - `apps/web` is the Wagmi 2 + Reown/AppKit acceptance fixture
+- `apps/web-npm` is the same Wagmi 2 + Reown/AppKit fixture, but installs `turnkey-wagmi-connector` from npm
 - `apps/web-wagmi3` is the Wagmi 3 acceptance fixture with both pure and Reown/LI.FI routes
 
 ## Stack
 
-- `next@16.2.1`
+- `next@16.2.3`
 - `react@19.2.4`
 - `wagmi@2.19.5` in `apps/web`
+- `wagmi@2.19.5` in `apps/web-npm`
 - `wagmi@3.6.0` in `apps/web-wagmi3`
 - `@wagmi/core@3.4.1` in `apps/web-wagmi3`
 - `viem@2.47.6`
@@ -51,7 +59,7 @@ packages/turnkey-wagmi-connector
 
 ## Environment
 
-Copy `apps/web/.env.example` or `apps/web-wagmi3/.env.example` and provide:
+Copy `apps/web/.env.example`, `apps/web-npm/.env.example`, or `apps/web-wagmi3/.env.example` and provide:
 
 ```bash
 NEXT_PUBLIC_TURNKEY_ORGANIZATION_ID=
@@ -63,7 +71,7 @@ NEXT_PUBLIC_BASE_RPC_URL=
 NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL=
 ```
 
-`apps/web` also needs:
+`apps/web` and `apps/web-npm` also need:
 
 ```bash
 NEXT_PUBLIC_REOWN_PROJECT_ID=
@@ -94,6 +102,12 @@ For the Wagmi 3 fixture:
 pnpm dev:wagmi3
 ```
 
+For the npm-consumer fixture:
+
+```bash
+pnpm dev:npm
+```
+
 Useful commands:
 
 ```bash
@@ -105,5 +119,6 @@ pnpm test
 ## Notes
 
 - `/widget` and `/sandbox` are dynamic routes because they depend on client-side wallet providers.
+- `apps/web-npm` is the fixture to use when you want to validate the published npm package instead of the local workspace source.
 - `apps/web-wagmi3` keeps `/` intentionally Reown-free so Wagmi 3 connector compatibility can still be validated without external-wallet orchestration variables.
 - LI.FI currently pulls multichain wallet dependencies, including Sui packages, so the app pins `@mysten/sui@2.8.0` to keep the widget build stable.

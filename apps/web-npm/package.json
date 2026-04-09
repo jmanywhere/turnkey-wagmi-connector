@@ -1,5 +1,5 @@
 {
-  "name": "web",
+  "name": "web-npm",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -17,14 +17,12 @@
     "@reown/appkit": "1.8.19",
     "@reown/appkit-adapter-wagmi": "1.8.19",
     "@tanstack/react-query": "5.95.2",
-    "@turnkey/core": "1.14.0",
     "@turnkey/react-wallet-kit": "1.11.0",
-    "@turnkey/viem": "0.14.27",
     "@wagmi/core": "2.22.1",
     "next": "16.2.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "turnkey-wagmi-connector": "workspace:*",
+    "turnkey-wagmi-connector": "npm:turnkey-wagmi-connector@0.0.1",
     "viem": "2.47.6",
     "wagmi": "2.19.5"
   },
@@ -38,10 +36,5 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.2"
-  },
-  "dependenciesMeta": {
-    "turnkey-wagmi-connector": {
-      "injected": true
-    }
   }
 }

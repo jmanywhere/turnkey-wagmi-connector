@@ -34,6 +34,7 @@ Current public exports:
 ## Compatibility
 
 - `apps/web`: Wagmi 2 + Reown/AppKit acceptance fixture
+- `apps/web-npm`: Wagmi 2 + Reown/AppKit fixture that consumes the published npm package
 - `apps/web-wagmi3`: pure Wagmi 3 acceptance fixture
 - supported `wagmi` range: `>=2.19.5 <4`
 - supported `@wagmi/core` range: `>=2.21.2 <4`
@@ -338,10 +339,11 @@ If you use the package inside a Next monorepo workspace, pay attention to:
 - shared peer dependencies
 - dynamic routes where client-only wallet providers are required
 - `transpilePackages` if you consume the workspace package source directly
+- no `transpilePackages` requirement if you consume the published npm build
 
 ## Current Limitations
 
 - first embedded EVM account only
 - no account selector
 - no Solana support
-- no publish-ready dist output yet
+- published npm build currently validated in `apps/web-npm`
