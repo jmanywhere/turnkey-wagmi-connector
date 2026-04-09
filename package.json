@@ -16,5 +16,6 @@
     "@testing-library/react": "^16.3.2",
     "jsdom": "^29.0.1",
     "vitest": "^4.1.2"
-  }
+  },
+  "version": "0.0.1"
 }
