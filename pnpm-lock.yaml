@@ -53,15 +53,36 @@ importers:
       '@wagmi/core':
         specifier: 2.22.1
         version: 2.22.1(@tanstack/query-core@5.95.2)(@types/react@19.2.14)(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.4))(viem@2.47.6(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      lucide-react:
+        specifier: ^1.7.0
+        version: 1.7.0(react@19.2.4)
       next:
         specifier: 16.2.3
         version: 16.2.3(@babel/core@7.29.0)(babel-plugin-macros@3.1.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      next-themes:
+        specifier: ^0.4.6
+        version: 0.4.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      radix-ui:
+        specifier: ^1.4.3
+        version: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react:
         specifier: 19.2.4
         version: 19.2.4
       react-dom:
         specifier: 19.2.4
         version: 19.2.4(react@19.2.4)
+      shiki:
+        specifier: ^4.0.2
+        version: 4.0.2
+      tailwind-merge:
+        specifier: ^3.5.0
+        version: 3.5.0
       turnkey-wagmi-connector:
         specifier: workspace:*
         version: file:packages/turnkey-wagmi-connector(d1160289d12f8f85d7c7dad8dc9c749f)
@@ -160,8 +181,8 @@ importers:
         specifier: ^3.5.0
         version: 3.5.0
       turnkey-wagmi-connector:
-        specifier: npm:turnkey-wagmi-connector@0.0.1
-        version: 0.0.1(caa87eafe09306a07fbde65d04b31050)
+        specifier: 0.0.3
+        version: 0.0.3(caa87eafe09306a07fbde65d04b31050)
       viem:
         specifier: 2.47.6
         version: 2.47.6(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6)
@@ -6879,8 +6900,8 @@ packages:
     resolution: {integrity: sha512-axr3IdNuVIxnaK5XGEUFTu3YmAQ6lllgrvqfEoR16g/HGnYY/6We4oWENtAnzK6/LpJ2ur9PAb80RBt7/U4ugw==}
     engines: {node: '>= 6.0.0'}
 
-  turnkey-wagmi-connector@0.0.1:
-    resolution: {integrity: sha512-iTJ7ap5bbLgnbAdf1uq/uNLdmHhVW1oqf7YePiR1zHoKE+ch35ooRJSP23ObQ9F2NJSmi1pLKKrq2MHpquZVcQ==}
+  turnkey-wagmi-connector@0.0.3:
+    resolution: {integrity: sha512-5wkAgGxgpvE6h2yVa9lGEGF5cVmuMGMlqlvqjO1qmxpTKWEYJASQTruPqkD9VbXGViKNl5bnbwkS/CLMFjgt8w==}
     peerDependencies:
       '@tanstack/react-query': '>=5.0.0'
       '@turnkey/react-wallet-kit': ^1.11.0
@@ -10619,7 +10640,7 @@ snapshots:
       debug: 4.4.3
       invariant: 2.2.4
       metro: 0.83.5(bufferutil@4.1.0)(utf-8-validate@5.0.10)
-      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       metro-core: 0.83.5
       semver: 7.7.4
     transitivePeerDependencies:
@@ -19119,6 +19140,21 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  metro-config@0.83.5(bufferutil@4.1.0)(utf-8-validate@5.0.10):
+    dependencies:
+      connect: 3.7.0
+      flow-enums-runtime: 0.0.6
+      jest-validate: 29.7.0
+      metro: 0.83.5(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      metro-cache: 0.83.5
+      metro-core: 0.83.5
+      metro-runtime: 0.83.5
+      yaml: 2.8.3
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   metro-config@0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6):
     dependencies:
       connect: 3.7.0
@@ -19270,7 +19306,7 @@ snapshots:
       metro-babel-transformer: 0.83.5
       metro-cache: 0.83.5
       metro-cache-key: 0.83.5
-      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       metro-core: 0.83.5
       metro-file-map: 0.83.5
       metro-resolver: 0.83.5
@@ -20938,7 +20974,7 @@ snapshots:
     dependencies:
       tslib: 1.14.1
 
-  turnkey-wagmi-connector@0.0.1(caa87eafe09306a07fbde65d04b31050):
+  turnkey-wagmi-connector@0.0.3(caa87eafe09306a07fbde65d04b31050):
     dependencies:
       '@tanstack/react-query': 5.95.2(react@19.2.4)
       '@turnkey/core': 1.14.0(@react-native-async-storage/async-storage@1.24.0(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.4)(utf-8-validate@6.0.6)))(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6)

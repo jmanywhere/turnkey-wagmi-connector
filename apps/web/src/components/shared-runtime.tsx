@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AppKitAccountButton,
   AppKitConnectButton,
@@ -8,7 +8,7 @@ import {
 } from "@reown/appkit/react";
 import { useAccount, useBalance, useChainId, useConnections } from "wagmi";
 import { useTurnkeySessionGate } from "turnkey-wagmi-connector";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, CircleCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,13 +24,10 @@ import { SHARED_RUNTIME_CONNECT_HEADER_ID } from "@/lib/shared-runtime-scroll";
 
 export function SharedRuntime() {
   const sessionGate = useTurnkeySessionGate();
-  const connectorError =
-    "connectorError" in sessionGate && typeof sessionGate.connectorError === "string"
-      ? sessionGate.connectorError
-      : undefined;
   const account = useAccount();
   const chainId = useChainId();
   const connections = useConnections();
+  const [disconnectNotice, setDisconnectNotice] = useState<string>("");
   const { data: balance, error: balanceError } = useBalance({
     address: account.address,
     chainId: account.chainId ?? chainId,
@@ -40,6 +37,12 @@ export function SharedRuntime() {
   });
 
   const connectedAddress = account.isConnected ? account.address : undefined;
+
+  useEffect(() => {
+    if (sessionGate.authState === "authenticated") {
+      setDisconnectNotice("");
+    }
+  }, [sessionGate.authState]);
 
   const alerts = useMemo(() => {
     const items: string[] = [];
@@ -68,9 +71,9 @@ export function SharedRuntime() {
       );
     }
 
-    if (connectorError) {
+    if (sessionGate.connectorError) {
       items.push(
-        `Turnkey connector could not finish connecting. Your Turnkey session is still active, but RPC-backed connector actions stay paused until the transport recovers or you reconnect.${` Reason: ${connectorError}`}`,
+        `Turnkey connector could not finish connecting. Your Turnkey session is still active, but RPC-backed connector actions stay paused until the transport recovers or you reconnect. Reason: ${sessionGate.connectorError}`,
       );
     }
 
@@ -82,8 +85,8 @@ export function SharedRuntime() {
   }, [
     account.isConnected,
     balanceError,
-    connectorError,
     sessionGate.authState,
+    sessionGate.connectorError,
     sessionGate.lastError,
     sessionGate.reconnectRequired,
   ]);
@@ -117,23 +120,45 @@ export function SharedRuntime() {
           </Alert>
         ))}
 
+        {disconnectNotice ? (
+          <Alert>
+            <CircleCheck className="size-4" />
+            <AlertDescription>{disconnectNotice}</AlertDescription>
+          </Alert>
+        ) : null}
+
         <div className="flex flex-wrap gap-2">
           <Button
-            onClick={() => void sessionGate.connectTurnkey()}
+            onClick={() => {
+              setDisconnectNotice("");
+              void sessionGate.connectTurnkey();
+            }}
             type="button"
           >
             Connect Turnkey
           </Button>
           <Button
             variant="secondary"
-            onClick={() => void sessionGate.refreshSession()}
+            onClick={() => {
+              setDisconnectNotice("");
+              void sessionGate.refreshSession();
+            }}
             type="button"
           >
             Refresh session
           </Button>
           <Button
             variant="outline"
-            onClick={() => void sessionGate.disconnectAll()}
+            onClick={() => {
+              void sessionGate
+                .disconnectAll()
+                .then(() => {
+                  setDisconnectNotice("Successfully disconnected.");
+                })
+                .catch(() => {
+                  setDisconnectNotice("");
+                });
+            }}
             type="button"
           >
             Disconnect Turnkey

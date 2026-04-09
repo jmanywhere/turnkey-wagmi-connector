@@ -6,6 +6,8 @@ import { useConfig, useConnections } from "wagmi";
 import { AuthState, useTurnkey } from "@turnkey/react-wallet-kit";
 import {
   setActiveConnectorId,
+  clearConnectorError,
+  setConnectorError,
   setReconnectRequired,
 } from "../provider/runtime-store";
 import { useTurnkeySessionGate } from "../hooks/use-turnkey-session-gate";
@@ -103,11 +105,12 @@ export function TurnkeyWagmiBridge({
         chainId: wagmiConfig.chains[0]?.id,
       })
         .then(() => {
+          clearConnectorError();
           setReconnectRequired(false);
           setActiveConnectorId(turnkeyConnectorId);
         })
         .catch((error: unknown) => {
-          setReconnectRequired(true, error instanceof Error ? error.message : String(error));
+          setConnectorError(error instanceof Error ? error.message : String(error));
         });
     });
   }, [
@@ -130,7 +133,10 @@ export function TurnkeyWagmiBridge({
       startTransition(() => {
         void turnkey
           .refreshSession()
-          .then(() => setReconnectRequired(false))
+          .then(() => {
+            clearConnectorError();
+            setReconnectRequired(false);
+          })
           .catch(async (error: unknown) => {
             setReconnectRequired(
               true,
@@ -143,6 +149,7 @@ export function TurnkeyWagmiBridge({
     }
 
     if (event.type === "expired") {
+      clearConnectorError();
       startTransition(() => {
         void disconnectForExpiredSession(wagmiConfig, turnkey.logout, turnkeyConnectorId);
       });
@@ -151,6 +158,7 @@ export function TurnkeyWagmiBridge({
 
   useEffect(() => {
     if (turnkey.authState === AuthState.Unauthenticated) {
+      clearConnectorError();
       startTransition(() => {
         void disconnectTurnkeyConnections(wagmiConfig, turnkeyConnectorId);
       });
@@ -162,6 +170,7 @@ export function TurnkeyWagmiBridge({
     if (!turnkey.session) return;
     if (sessionGate.isSessionValid) return;
 
+    clearConnectorError();
     setReconnectRequired(true, "Turnkey session expired");
     startTransition(() => {
       void disconnectForExpiredSession(wagmiConfig, turnkey.logout, turnkeyConnectorId);

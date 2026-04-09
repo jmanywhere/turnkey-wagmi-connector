@@ -41,5 +41,6 @@ export type TurnkeyRuntimeState = {
   reconnectRequired: boolean;
   activeConnectorId?: string;
   lastEvent?: TurnkeySessionEvent;
+  connectorError?: string;
   lastError?: string;
 };

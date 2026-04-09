@@ -10,6 +10,7 @@ import {
 } from "@turnkey/react-wallet-kit";
 import { resolveEmbeddedEvmAccount } from "./resolve-embedded-account";
 import {
+  clearConnectorError,
   resetTurnkeyRuntimeState,
   setReconnectRequired,
   setTurnkeyRuntimeEvent,
@@ -74,6 +75,7 @@ export function TurnkeySessionProvider({
       callbacks?.beforeSessionExpiry?.(params);
     },
     onSessionExpired: (params) => {
+      clearConnectorError();
       setReconnectRequired(true, "Turnkey session expired");
       setTurnkeyRuntimeEvent({
         type: "expired",
@@ -83,6 +85,7 @@ export function TurnkeySessionProvider({
       callbacks?.onSessionExpired?.(params);
     },
     onAuthenticationSuccess: (params) => {
+      clearConnectorError();
       setReconnectRequired(false);
       setTurnkeyRuntimeEvent({
         type: "auth-success",

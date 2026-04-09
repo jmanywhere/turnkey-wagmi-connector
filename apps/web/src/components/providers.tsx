@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useTheme } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/lib/app-config";
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const { resolvedTheme } = useTheme();
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -26,10 +28,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       }),
   );
+  const tkConfig = useMemo(
+    () => ({
+      ...turnkeyProviderConfig,
+      ui: {
+        ...turnkeyProviderConfig.ui,
+        darkMode: resolvedTheme === "dark",
+      },
+    }),
+    [resolvedTheme],
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TurnkeySessionProvider turnkeyConfig={turnkeyProviderConfig}>
+      <TurnkeySessionProvider turnkeyConfig={tkConfig}>
         <WagmiProvider config={wagmiConfig}>
           <AppKitProvider {...appKitConfig}>
             <TurnkeyWagmiBridge />

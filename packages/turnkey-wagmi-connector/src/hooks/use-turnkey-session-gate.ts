@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { AuthState, useTurnkey } from "@turnkey/react-wallet-kit";
 import {
+  clearConnectorError,
   getTurnkeyRuntimeState,
   setReconnectRequired,
   subscribeTurnkeyRuntime,
@@ -17,8 +18,10 @@ export type TurnkeySessionGate = {
   authState: ReturnType<typeof useTurnkey>["authState"];
   /** Whether the UI should prompt the user to re-establish the Turnkey session. */
   reconnectRequired: boolean;
-  /** Last recorded session or connector error, when available. */
+  /** Last recorded session error, when available. */
   lastError?: string;
+  /** Last recorded connector or RPC bootstrap error, when available. */
+  connectorError?: string;
   /** Active Wagmi connector id observed by the bridge. */
   activeConnectorId?: string;
   /** Whether the current Turnkey session is authenticated and not expired. */
@@ -79,6 +82,7 @@ export function useTurnkeySessionGate(): TurnkeySessionGate {
     authState: turnkey.authState,
     reconnectRequired: runtime.reconnectRequired,
     lastError: runtime.lastError,
+    connectorError: runtime.connectorError,
     activeConnectorId: runtime.activeConnectorId,
     isSessionValid,
     sessionExpiresAt,
@@ -90,7 +94,8 @@ export function useTurnkeySessionGate(): TurnkeySessionGate {
     },
     disconnectAll: async () => {
       await turnkey.logout();
-      setReconnectRequired(true, "Session closed");
+      clearConnectorError();
+      setReconnectRequired(false);
     },
     lastEvent: runtime.lastEvent,
     lastEventAt: runtime.lastEvent?.at,

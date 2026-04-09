@@ -1,167 +1,114 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useId, useState } from "react";
+import { baseSepolia } from "viem/chains";
 import { parseEther } from "viem";
-import { useTurnkeyWalletActions } from "turnkey-wagmi-connector";
-import { isTurnkeyConfigured } from "@/lib/env";
-
-const typedDataPayload = {
-  domain: {
-    name: "Turnkey Sandbox",
-    version: "1",
-    chainId: 84532,
-  },
-  primaryType: "SandboxMessage" as const,
-  types: {
-    SandboxMessage: [
-      { name: "purpose", type: "string" },
-      { name: "timestamp", type: "string" },
-    ],
-  },
-  message: {
-    purpose: "Verify direct Turnkey viem signing",
-    timestamp: new Date().toISOString(),
-  },
-};
+import {
+  useAccount,
+  useSendTransaction,
+  useSwitchChain,
+} from "wagmi";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CopyBlock } from "@/components/copy-block";
+import { WagmiChainSwitchSignCard } from "@/components/wagmi-chain-switch-sign-card";
+import { scrollToSharedRuntimeConnectHeader } from "@/lib/shared-runtime-scroll";
 
 export function SandboxDemo() {
-  const turnkeyActions = useTurnkeyWalletActions();
-  const [messageSignature, setMessageSignature] = useState("");
-  const [typedSignature, setTypedSignature] = useState("");
+  const fieldId = useId();
+  const sendToId = `${fieldId}-send-to`;
+  const amountId = `${fieldId}-send-amount`;
+  const account = useAccount();
+  const { switchChainAsync } = useSwitchChain();
+  const { sendTransactionAsync, isPending: isSendPending } =
+    useSendTransaction();
   const [transactionHash, setTransactionHash] = useState("");
   const [sendTo, setSendTo] = useState("");
   const [amount, setAmount] = useState("0");
   const [error, setError] = useState("");
 
-  const targetAddress = sendTo || turnkeyActions.address || "";
+  const targetAddress = sendTo || account.address || "";
+  const onCorrectChain = account.chainId === baseSepolia.id;
 
   return (
-    <div className="route-layout stack">
-      <header className="route-header">
-        <div className="stack">
-          <p className="eyebrow">Direct Action Sandbox</p>
-          <h1>Turnkey-backed Viem actions on Base Sepolia.</h1>
-          <p className="text-muted">
-            These calls bypass generic wallet-provider semantics and use
-            <code> @turnkey/viem </code> directly. The active embedded EVM
-            account stays session-gated by the same Turnkey runtime.
-          </p>
-        </div>
-        <div className="button-row">
-          <Link href="/" className="secondary-link">
-            Back home
-          </Link>
-          <Link href="/widget" className="secondary-link">
-            Widget demo
-          </Link>
-        </div>
-      </header>
+    <div className="grid gap-6">
+      <WagmiChainSwitchSignCard />
 
-      {!isTurnkeyConfigured ? (
-        <div className="session-banner">
-          Turnkey env vars are missing. Direct signing will stay unavailable
-          until the auth proxy config and organization ID are provided.
-        </div>
-      ) : null}
-
-      <section className="dashboard-grid">
-        <article className="panel dashboard-panel stack">
-          <div className="status-grid">
-            <div className="status-card">
-              <span className="status-label">Embedded address</span>
-              <div className="status-value">
-                {turnkeyActions.address ?? "not connected"}
-              </div>
-            </div>
-            <div className="status-card">
-              <span className="status-label">Active chain</span>
-              <div className="status-value">
-                {turnkeyActions.chainId ?? "not resolved"}
-              </div>
-            </div>
-          </div>
-
-          <div className="button-row">
-            <button
-              className="action-button primary"
-              disabled={!turnkeyActions.address}
-              onClick={async () => {
-                try {
-                  setError("");
-                  const result = await turnkeyActions.signMessage({
-                    message: `Turnkey direct sign :: ${new Date().toISOString()}`,
-                  });
-                  setMessageSignature(result);
-                } catch (cause) {
-                  setError(
-                    cause instanceof Error ? cause.message : "Message signing failed.",
-                  );
-                }
-              }}
-              type="button"
-            >
-              Sign message
-            </button>
-            <button
-              className="action-button secondary"
-              disabled={!turnkeyActions.address}
-              onClick={async () => {
-                try {
-                  setError("");
-                  const result = await turnkeyActions.signTypedData(
-                    typedDataPayload,
-                  );
-                  setTypedSignature(result);
-                } catch (cause) {
-                  setError(
-                    cause instanceof Error
-                      ? cause.message
-                      : "Typed data signing failed.",
-                  );
-                }
-              }}
-              type="button"
-            >
-              Sign typed data
-            </button>
-          </div>
-
-          {messageSignature ? (
-            <pre className="mono-box">{messageSignature}</pre>
-          ) : null}
-          {typedSignature ? <pre className="mono-box">{typedSignature}</pre> : null}
-        </article>
-
-        <article className="panel dashboard-panel stack">
-          <p className="eyebrow">Send Transaction</p>
-          <h2>Base Sepolia transfer via Turnkey</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Base Sepolia Transfer</CardTitle>
+          <CardDescription>
+            Sends native ETH through the active Wagmi wallet on Base Sepolia
+            (chain {baseSepolia.id}). Switches network automatically when needed;
+            the wallet needs enough Sepolia ETH for gas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
           <div className="field">
-            <label htmlFor="send-to">Recipient</label>
+            <label htmlFor={sendToId}>Recipient</label>
             <input
-              id="send-to"
+              id={sendToId}
               onChange={(event) => setSendTo(event.target.value)}
               placeholder="0x..."
               value={sendTo}
             />
           </div>
+
           <div className="field">
-            <label htmlFor="send-amount">Value in ETH</label>
+            <label htmlFor={amountId}>Value in ETH</label>
             <input
-              id="send-amount"
+              id={amountId}
               onChange={(event) => setAmount(event.target.value)}
               placeholder="0.0001"
               value={amount}
             />
           </div>
-          <div className="button-row">
-            <button
-              className="action-button primary"
-              disabled={!turnkeyActions.address || !targetAddress}
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              disabled={!account.isConnected || onCorrectChain}
+              onClick={() => {
+                void switchChainAsync({ chainId: baseSepolia.id })
+                  .then(() => setError(""))
+                  .catch((cause: unknown) => {
+                    setError(
+                      cause instanceof Error
+                        ? cause.message
+                        : "Chain switch failed.",
+                    );
+                  });
+              }}
+              type="button"
+              className="w-fit"
+            >
+              Switch to Base Sepolia
+            </Button>
+            <Button
+              disabled={
+                !account.isConnected ||
+                !account.address ||
+                !targetAddress ||
+                isSendPending
+              }
               onClick={async () => {
+                if (!account.address) {
+                  return;
+                }
                 try {
                   setError("");
-                  const hash = await turnkeyActions.sendTransaction({
+                  if (account.chainId !== baseSepolia.id) {
+                    await switchChainAsync({ chainId: baseSepolia.id });
+                  }
+                  const hash = await sendTransactionAsync({
+                    chainId: baseSepolia.id,
                     to: targetAddress as `0x${string}`,
                     value: parseEther(amount || "0"),
                   });
@@ -175,16 +122,38 @@ export function SandboxDemo() {
                 }
               }}
               type="button"
+              className="w-fit"
             >
-              Send direct transaction
-            </button>
+              {isSendPending ? "Sending…" : "Send transaction"}
+            </Button>
           </div>
-          {transactionHash ? (
-            <pre className="mono-box">{transactionHash}</pre>
+
+          {!account.isConnected ? (
+            <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-4 py-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Connect a wallet from the shared runtime first.
+              </p>
+              <Button
+                onClick={() => scrollToSharedRuntimeConnectHeader()}
+                type="button"
+                variant="secondary"
+              >
+                Go to connect
+              </Button>
+            </div>
           ) : null}
-          {error ? <div className="session-banner">{error}</div> : null}
-        </article>
-      </section>
+
+          {transactionHash ? (
+            <CopyBlock label="Transaction hash" value={transactionHash} />
+          ) : null}
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+        </CardContent>
+      </Card>
     </div>
   );
 }
+

@@ -28,10 +28,6 @@ const chainButtons = [
 
 export function WagmiChainSwitchSignCard() {
   const sessionGate = useTurnkeySessionGate();
-  const connectorError =
-    "connectorError" in sessionGate && typeof sessionGate.connectorError === "string"
-      ? sessionGate.connectorError
-      : undefined;
   const { switchChain } = useTurnkeyChainSwitch(wagmiConfig);
   const account = useAccount();
   const connections = useConnections();
@@ -67,8 +63,8 @@ export function WagmiChainSwitchSignCard() {
   const reconnectNotice = sessionGate.reconnectRequired
     ? `Turnkey session is unavailable. Turnkey-backed actions stay paused until you reconnect.${sessionGate.lastError ? ` Reason: ${sessionGate.lastError}` : ""}`
     : null;
-  const connectorNotice = connectorError
-    ? `Turnkey connector could not finish connecting. The Turnkey session is still active, but RPC-backed connector actions stay paused until the transport recovers or you reconnect. Reason: ${connectorError}`
+  const connectorNotice = sessionGate.connectorError
+    ? `Turnkey connector could not finish connecting. The Turnkey session is still active, but RPC-backed connector actions stay paused until the transport recovers or you reconnect. Reason: ${sessionGate.connectorError}`
     : null;
 
   const verifyLocalSignature = async (
@@ -249,3 +245,4 @@ export function WagmiChainSwitchSignCard() {
     </Card>
   );
 }
+

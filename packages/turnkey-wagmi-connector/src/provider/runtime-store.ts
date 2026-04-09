@@ -85,6 +85,23 @@ export function setReconnectRequired(
 }
 
 /**
+ * Stores the latest non-session connector or RPC bootstrap error.
+ */
+export function setConnectorError(connectorError?: string) {
+  setTurnkeyRuntimeState((current) => ({
+    ...current,
+    connectorError,
+  }));
+}
+
+/**
+ * Clears any stale connector or RPC bootstrap error.
+ */
+export function clearConnectorError() {
+  setConnectorError(undefined);
+}
+
+/**
  * Persists the currently active Wagmi connector id.
  */
 export function setActiveConnectorId(activeConnectorId?: string) {

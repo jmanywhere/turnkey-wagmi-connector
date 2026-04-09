@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => {
   const getConnectionsMock = vi.fn(() => connectionsState);
   const getConnectorsMock = vi.fn(() => []);
   const setActiveConnectorIdMock = vi.fn();
+  const setConnectorErrorMock = vi.fn();
+  const clearConnectorErrorMock = vi.fn();
 
   return {
     get connectionsState() {
@@ -31,6 +33,8 @@ const mocks = vi.hoisted(() => {
     getConnectionsMock,
     getConnectorsMock,
     setActiveConnectorIdMock,
+    setConnectorErrorMock,
+    clearConnectorErrorMock,
   };
 });
 
@@ -56,6 +60,8 @@ vi.mock("@turnkey/react-wallet-kit", () => ({
 
 vi.mock("../provider/runtime-store", () => ({
   setActiveConnectorId: mocks.setActiveConnectorIdMock,
+  setConnectorError: mocks.setConnectorErrorMock,
+  clearConnectorError: mocks.clearConnectorErrorMock,
   setReconnectRequired: vi.fn(),
 }));
 
@@ -79,6 +85,8 @@ describe("disconnectAllConnections", () => {
     mocks.getConnectionsMock.mockClear();
     mocks.getConnectorsMock.mockClear();
     mocks.setActiveConnectorIdMock.mockReset();
+    mocks.setConnectorErrorMock.mockReset();
+    mocks.clearConnectorErrorMock.mockReset();
   });
 
   it("disconnects every active connection through Wagmi actions", async () => {
@@ -117,6 +125,8 @@ describe("disconnectTurnkeyConnections", () => {
     mocks.getConnectionsMock.mockClear();
     mocks.getConnectorsMock.mockClear();
     mocks.setActiveConnectorIdMock.mockReset();
+    mocks.setConnectorErrorMock.mockReset();
+    mocks.clearConnectorErrorMock.mockReset();
   });
 
   it("disconnects only the Turnkey connector and preserves external wallets", async () => {

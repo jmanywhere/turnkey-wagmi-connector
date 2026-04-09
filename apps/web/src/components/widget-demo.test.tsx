@@ -1,24 +1,21 @@
 /* @vitest-environment jsdom */
 
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SandboxDemo } from "./sandbox-demo";
+import { SharedRuntime } from "./shared-runtime";
 import { WidgetDemo } from "./widget-demo";
 
-vi.mock("next/link", () => ({
-  default: ({
-    children,
-    href,
-    className,
-  }: {
-    children: React.ReactNode;
-    href: string;
-    className?: string;
-  }) => (
-    <a href={href} className={className}>
-      {children}
-    </a>
-  ),
+const mocks = vi.hoisted(() => ({
+  sessionGate: {} as any,
+}));
+
+vi.mock("@reown/appkit/react", () => ({
+  AppKitAccountButton: () => <button type="button">Account</button>,
+  AppKitConnectButton: () => <button type="button">Connect Wallet</button>,
+  AppKitNetworkButton: () => <button type="button">Network</button>,
 }));
 
 vi.mock("@lifi/widget", () => ({
@@ -27,10 +24,10 @@ vi.mock("@lifi/widget", () => ({
   ),
 }));
 
-vi.mock("@reown/appkit/react", () => ({
-  AppKitAccountButton: () => <button type="button">Account</button>,
-  AppKitConnectButton: () => <button type="button">Connect Wallet</button>,
-  AppKitNetworkButton: () => <button type="button">Network</button>,
+vi.mock("next-themes", () => ({
+  useTheme: () => ({
+    resolvedTheme: "dark",
+  }),
 }));
 
 vi.mock("@/lib/app-config", () => ({
@@ -46,21 +43,7 @@ vi.mock("turnkey-wagmi-connector", () => ({
   useTurnkeyChainSwitch: () => ({
     switchChain: vi.fn(async () => undefined),
   }),
-  useTurnkeySessionGate: () => ({
-    authState: "unauthenticated",
-    reconnectRequired: false,
-    lastError: undefined,
-    activeConnectorId: "injected",
-    isSessionValid: false,
-    sessionExpiresAt: undefined,
-    sessionSecondsRemaining: undefined,
-    connectTurnkey: vi.fn(async () => undefined),
-    refreshSession: vi.fn(async () => undefined),
-    disconnectAll: vi.fn(async () => undefined),
-    lastEvent: undefined,
-    lastEventAt: undefined,
-    embeddedAccount: undefined,
-  }),
+  useTurnkeySessionGate: () => mocks.sessionGate,
 }));
 
 vi.mock("wagmi", () => ({
@@ -85,21 +68,118 @@ vi.mock("wagmi", () => ({
   useSignMessage: () => ({
     signMessageAsync: vi.fn(async () => "0xsigned"),
   }),
+  useSwitchChain: () => ({
+    switchChainAsync: vi.fn(async () => undefined),
+  }),
+  useSendTransaction: () => ({
+    sendTransactionAsync: vi.fn(async () => "0xabc"),
+    isPending: false,
+  }),
 }));
 
-describe("WidgetDemo", () => {
-  it("keeps an external wallet active when Turnkey has no session", () => {
-    render(<WidgetDemo />);
+vi.mock("@/components/ui/button", () => ({
+  Button: ({
+    children,
+    ...props
+  }: {
+    children: ReactNode;
+  }) => <button {...props}>{children}</button>,
+}));
+
+vi.mock("@/components/ui/card", () => ({
+  Card: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  CardContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  CardDescription: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  CardHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  CardTitle: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock("@/components/ui/alert", () => ({
+  Alert: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  AlertDescription: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock("@/components/ui/badge", () => ({
+  Badge: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock("@/components/copy-button", () => ({
+  CopyButton: () => null,
+}));
+
+vi.mock("@/components/copy-block", () => ({
+  CopyBlock: () => null,
+}));
+
+vi.mock("lucide-react", () => ({
+  AlertTriangle: () => null,
+  CircleCheck: () => null,
+}));
+
+describe("workspace web demo", () => {
+  beforeEach(() => {
+    mocks.sessionGate = {
+      authState: "unauthenticated",
+      reconnectRequired: false,
+      connectorError: undefined,
+      lastError: undefined,
+      activeConnectorId: "injected",
+      isSessionValid: false,
+      sessionExpiresAt: undefined,
+      sessionSecondsRemaining: undefined,
+      connectTurnkey: vi.fn(async () => undefined),
+      refreshSession: vi.fn(async () => undefined),
+      disconnectAll: vi.fn(async () => undefined),
+      lastEvent: undefined,
+      lastEventAt: undefined,
+      embeddedAccount: undefined,
+    } as any;
+  });
+
+  it("keeps shared runtime controls available while Turnkey is logged out", () => {
+    render(<SharedRuntime />);
 
     expect(
-      screen.getByText(/the connected wagmi wallet remains usable/i),
+      screen.getByText(/the active wagmi wallet remains connected/i),
     ).toBeInTheDocument();
     expect(screen.getByText("external wallet")).toBeInTheDocument();
-    expect(screen.getByTestId("lifi-widget")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Account" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Network" })).toBeInTheDocument();
+  });
+
+  it("shows a success notice after explicitly disconnecting Turnkey", async () => {
+    mocks.sessionGate = {
+      ...mocks.sessionGate,
+      authState: "authenticated",
+      isSessionValid: true,
+    };
+
+    render(<SharedRuntime />);
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Disconnect Turnkey" })[0],
+    );
+
     expect(
-      screen.getByRole("button", {
-        name: "Sign via Wagmi",
-      }),
-    ).toBeEnabled();
+      await screen.findByText(/successfully disconnected\./i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/turnkey session is unavailable/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("still mounts the lifi widget for an external wallet without a Turnkey session", () => {
+    render(<WidgetDemo />);
+
+    expect(screen.getByTestId("lifi-widget")).toBeInTheDocument();
+  });
+
+  it("shows sandbox wagmi sign controls while Turnkey is logged out", () => {
+    render(<SandboxDemo />);
+
+    expect(
+      screen.getByText(/turnkey is logged out\. the current wagmi wallet should stay connected/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign via Wagmi" })).toBeEnabled();
   });
 });

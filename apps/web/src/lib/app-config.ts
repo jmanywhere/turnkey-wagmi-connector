@@ -38,29 +38,42 @@ function getRpcUrl(chainId: number, fallback: string) {
   return rpcOverrides[chainId as keyof typeof rpcOverrides] || fallback;
 }
 
-const appNetworks = appChains.map((chain) => {
-  const rpcUrl = getRpcUrl(chain.id, chain.rpcUrls.default.http[0] ?? "");
+function withRpcOverride<TChain extends (typeof appChains)[number]>(
+  chain: TChain,
+  rpcUrl: string,
+) {
+  const resolvedRpcUrl = rpcUrl || chain.rpcUrls.default.http[0] || "";
   const publicRpcUrls = "public" in chain.rpcUrls ? chain.rpcUrls.public : undefined;
+
   return {
     ...chain,
     rpcUrls: {
       ...chain.rpcUrls,
       default: {
         ...chain.rpcUrls.default,
-        http: [rpcUrl],
+        http: [resolvedRpcUrl],
       },
       public: publicRpcUrls
         ? {
             ...publicRpcUrls,
-            http: [rpcUrl],
+            http: [resolvedRpcUrl],
           }
         : undefined,
     },
   };
+}
+
+const connectorChains = appChains.map((chain) =>
+  withRpcOverride(chain, getRpcUrl(chain.id, chain.rpcUrls.default.http[0] ?? "")),
+) as unknown as typeof appChains;
+
+const appNetworks = connectorChains.map((chain) => {
+  const rpcUrl = getRpcUrl(chain.id, chain.rpcUrls.default.http[0] ?? "");
+  return withRpcOverride(chain, rpcUrl);
 }) as unknown as [AppKitNetwork, ...AppKitNetwork[]];
 
 export const turnkeyConnector = createTurnkeyConnector({
-  chains: appChains,
+  chains: connectorChains,
   walletLabel: "Turnkey Session",
 });
 

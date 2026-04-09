@@ -110,9 +110,18 @@ export function Wagmi3Demo() {
 
       {sessionGate.reconnectRequired ? (
         <div className="session-banner">
-          Turnkey session is no longer valid. Reconnect before sending more
+          Turnkey session is unavailable. Reconnect before sending more
           Wagmi or direct Turnkey actions.
           {sessionGate.lastError ? ` Reason: ${sessionGate.lastError}` : ""}
+        </div>
+      ) : null}
+
+      {sessionGate.connectorError ? (
+        <div className="session-banner">
+          Turnkey connector could not finish connecting. The Turnkey session is
+          still active, but RPC-backed connector actions stay paused until the
+          transport recovers or you reconnect.
+          {` Reason: ${sessionGate.connectorError}`}
         </div>
       ) : null}
 

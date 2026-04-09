@@ -3,10 +3,14 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SandboxDemo } from "./sandbox-demo";
 import { SharedRuntime } from "./shared-runtime";
 import { WidgetDemo } from "./widget-demo";
+
+const mocks = vi.hoisted(() => ({
+  sessionGate: {} as any,
+}));
 
 vi.mock("@reown/appkit/react", () => ({
   AppKitAccountButton: () => <button type="button">Account</button>,
@@ -39,21 +43,7 @@ vi.mock("turnkey-wagmi-connector", () => ({
   useTurnkeyChainSwitch: () => ({
     switchChain: vi.fn(async () => undefined),
   }),
-  useTurnkeySessionGate: () => ({
-    authState: "unauthenticated",
-    reconnectRequired: false,
-    lastError: undefined,
-    activeConnectorId: "injected",
-    isSessionValid: false,
-    sessionExpiresAt: undefined,
-    sessionSecondsRemaining: undefined,
-    connectTurnkey: vi.fn(async () => undefined),
-    refreshSession: vi.fn(async () => undefined),
-    disconnectAll: vi.fn(async () => undefined),
-    lastEvent: undefined,
-    lastEventAt: undefined,
-    embeddedAccount: undefined,
-  }),
+  useTurnkeySessionGate: () => mocks.sessionGate,
 }));
 
 vi.mock("wagmi", () => ({
@@ -126,6 +116,25 @@ vi.mock("lucide-react", () => ({
 }));
 
 describe("third-party wallet fallback", () => {
+  beforeEach(() => {
+    mocks.sessionGate = {
+      authState: "unauthenticated",
+      reconnectRequired: false,
+      connectorError: undefined,
+      lastError: undefined,
+      activeConnectorId: "injected",
+      isSessionValid: false,
+      sessionExpiresAt: undefined,
+      sessionSecondsRemaining: undefined,
+      connectTurnkey: vi.fn(async () => undefined),
+      refreshSession: vi.fn(async () => undefined),
+      disconnectAll: vi.fn(async () => undefined),
+      lastEvent: undefined,
+      lastEventAt: undefined,
+      embeddedAccount: undefined,
+    } as any;
+  });
+
   it("keeps shared runtime controls available while Turnkey is logged out", () => {
     render(<SharedRuntime />);
 
@@ -150,5 +159,26 @@ describe("third-party wallet fallback", () => {
       screen.getByText(/turnkey is logged out\. the current wagmi wallet should stay connected/i),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign via Wagmi" })).toBeEnabled();
+  });
+
+  it("shows a connector warning without claiming the Turnkey session expired", () => {
+    mocks.sessionGate = {
+      ...mocks.sessionGate,
+      authState: "authenticated",
+      isSessionValid: true,
+      connectorError: "Failed to fetch chain id",
+      embeddedAccount: {
+        address: "0x1234567890abcdef1234567890abcdef12345678",
+      },
+    } as any;
+
+    render(<SharedRuntime />);
+
+    expect(
+      screen.getByText(/turnkey connector could not finish connecting/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/turnkey session is unavailable/i),
+    ).not.toBeInTheDocument();
   });
 });

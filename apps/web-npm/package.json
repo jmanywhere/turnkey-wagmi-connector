@@ -29,7 +29,7 @@
     "react-dom": "19.2.4",
     "shiki": "^4.0.2",
     "tailwind-merge": "^3.5.0",
-    "turnkey-wagmi-connector": "npm:turnkey-wagmi-connector@0.0.1",
+    "turnkey-wagmi-connector": "0.0.3",
     "viem": "2.47.6",
     "wagmi": "2.19.5"
   },
