@@ -4,6 +4,10 @@ Turnkey Embedded Wallet Kit integration for Wagmi v2 and v3.
 
 This package makes a Turnkey embedded EVM wallet behave like a normal Wagmi connector, keeps Wagmi connection state gated by the Turnkey session, and exposes direct Turnkey-backed wallet helpers when you need to bypass generic provider RPC flows.
 
+## Live demo
+
+**[turnkey-wagmi-connector-web.vercel.app](https://turnkey-wagmi-connector-web.vercel.app/)** — published-package fixture (Wagmi 2, Reown AppKit, LI.FI) that installs `turnkey-wagmi-connector` from npm.
+
 ## Package Version
 
 The source of truth for package versioning is [`packages/turnkey-wagmi-connector/package.json`](./packages/turnkey-wagmi-connector/package.json).
